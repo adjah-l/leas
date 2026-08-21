@@ -1,0 +1,10 @@
+{
+  "name": "leas",
+  "version": "0.1.0",
+  "description": "Self-hosted EAS: build and auto-submit Expo / React Native apps to iOS and Android, locally or in the cloud.",
+  "type": "module",
+  "bin": { "leas": "./src/cli.js" },
+  "engines": { "node": ">=20" },
+  "scripts": { "leas": "node src/cli.js" },
+  "license": "MIT"
+}

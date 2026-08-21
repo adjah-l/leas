@@ -1,0 +1,45 @@
+{
+  "cli": { "version": ">=0.1.0" },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "ios": { "exportMethod": "development", "configuration": "Debug" },
+      "android": { "buildType": "apk" }
+    },
+    "preview": {
+      "extends": "production",
+      "ios": { "exportMethod": "ad-hoc" },
+      "android": { "buildType": "apk" }
+    },
+    "production": {
+      "ios": {
+        "configuration": "Release",
+        "exportMethod": "app-store",
+        "distributionCertificatePath": "credentials/ios/dist.p12",
+        "provisioningProfilePath": "credentials/ios/profile.mobileprovision"
+      },
+      "android": {
+        "buildType": "app-bundle",
+        "keystorePath": "credentials/android/upload.keystore",
+        "keyAlias": "upload"
+      }
+    }
+  },
+  "submit": {
+    "production": {
+      "ios": {
+        "ascAppId": "1234567890",
+        "ascApiKeyId": "ABCD1234EF",
+        "ascApiIssuerId": "69a6de70-0000-0000-0000-000000000000",
+        "ascApiKeyPath": "credentials/ios/AuthKey_ABCD1234EF.p8",
+        "waitForProcessing": true
+      },
+      "android": {
+        "packageName": "com.example.app",
+        "serviceAccountKeyPath": "credentials/android/play-service-account.json",
+        "track": "internal",
+        "releaseNotes": { "en-US": "Bug fixes and improvements." }
+      }
+    }
+  }
+}

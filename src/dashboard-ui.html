@@ -1,0 +1,524 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>leas · builds</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+:root{
+  color-scheme:light;
+  --ground:#F1F3F1; --surface:#FFFFFF; --surface-2:#E7EBE9; --surface-3:#DCE2DF;
+  --ink:#141A19; --ink-2:#394644; --muted:#687573;
+  --line:#D5DBD8; --line-2:#B7C0BD;
+  --accent:#0B6E63; --accent-2:#084F47; --accent-soft:#DCEBE7;
+  /* status palette — fixed, never themed; always shipped with a dot + text label */
+  --st-good:#0ca30c; --st-warn:#fab219; --st-crit:#d03b3b; --st-idle:#8A9895;
+  /* text steps — the mark colors are illegible as small type on light */
+  --st-good-ink:#006300; --st-warn-ink:#A56A00;
+  /* categorical: platform identity */
+  --ios:#2a78d6; --android:#eb6834;
+  --grid:#E4E8E6; --axis:#C3CBC8;
+  --shadow:0 1px 2px rgba(20,26,25,.05), 0 10px 28px -20px rgba(20,26,25,.4);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --ground:#0E1211; --surface:#151B1A; --surface-2:#1C2422; --surface-3:#26302E;
+    --ink:#E9EFED; --ink-2:#BFCAC7; --muted:#8B9997;
+    --line:#252F2D; --line-2:#36423F;
+    --accent:#4FBFAE; --accent-2:#7FD6C8; --accent-soft:#12302C;
+    --st-good:#0ca30c; --st-warn:#fab219; --st-crit:#d03b3b; --st-idle:#6E7C79;
+    --st-good-ink:#0ca30c; --st-warn-ink:#fab219;
+    --ios:#3987e5; --android:#d95926;
+    --grid:#212B29; --axis:#36423F;
+    --shadow:0 1px 2px rgba(0,0,0,.5), 0 10px 28px -20px rgba(0,0,0,.9);
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --ground:#0E1211; --surface:#151B1A; --surface-2:#1C2422; --surface-3:#26302E;
+  --ink:#E9EFED; --ink-2:#BFCAC7; --muted:#8B9997;
+  --line:#252F2D; --line-2:#36423F;
+  --accent:#4FBFAE; --accent-2:#7FD6C8; --accent-soft:#12302C;
+  --st-good:#0ca30c; --st-warn:#fab219; --st-crit:#d03b3b; --st-idle:#6E7C79;
+  --st-good-ink:#0ca30c; --st-warn-ink:#fab219;
+  --ios:#3987e5; --android:#d95926;
+  --grid:#212B29; --axis:#36423F;
+  --shadow:0 1px 2px rgba(0,0,0,.5), 0 10px 28px -20px rgba(0,0,0,.9);
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--ground);color:var(--ink);
+  font-family:"IBM Plex Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased}
+.mono,code{font-family:"IBM Plex Mono",ui-monospace,Menlo,monospace}
+h1,h2{font-family:"IBM Plex Sans Condensed","IBM Plex Sans",sans-serif;font-weight:700;margin:0}
+.shell{max-width:1280px;margin:0 auto;padding:0 24px 72px}
+
+/* ---- top bar ---- */
+.bar{display:flex;align-items:center;gap:16px;flex-wrap:wrap;
+  padding:20px 0 18px;border-bottom:1px solid var(--line-2);margin-bottom:24px}
+.brand{font-family:"IBM Plex Mono",monospace;font-weight:600;font-size:14px;
+  letter-spacing:.14em;text-transform:uppercase;color:var(--accent)}
+.proj{font-family:"IBM Plex Sans Condensed",sans-serif;font-weight:700;font-size:19px;
+  letter-spacing:-.01em}
+.bar .sp{flex:1}
+.live{display:inline-flex;align-items:center;gap:7px;font-size:12.5px;color:var(--muted);
+  font-family:"IBM Plex Mono",monospace;letter-spacing:.04em}
+.live .dot{width:7px;height:7px;border-radius:50%;background:var(--st-good);flex:none}
+.live.on .dot{animation:pulse 2s ease-in-out infinite}
+.live.off .dot{background:var(--st-idle)}
+.live.demo .dot{background:var(--st-warn)}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.35;transform:scale(.82)}}
+
+/* ---- stat tiles ---- */
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(168px,1fr));gap:12px;margin-bottom:22px}
+.tile{background:var(--surface);border:1px solid var(--line);border-radius:4px;padding:14px 16px}
+.tile .k{font-family:"IBM Plex Mono",monospace;font-size:10.5px;letter-spacing:.11em;
+  text-transform:uppercase;color:var(--muted);display:block;margin-bottom:7px}
+.tile .v{font-size:30px;font-weight:600;line-height:1.05;letter-spacing:-.02em;
+  font-family:"IBM Plex Sans Condensed",sans-serif}
+.tile .v small{font-size:15px;font-weight:500;color:var(--muted);margin-left:2px}
+.tile .sub{font-size:12.5px;color:var(--muted);margin-top:5px}
+.tile.hot{border-color:var(--st-warn)}
+.tile.hot .v{color:var(--st-warn-ink)}
+
+/* ---- panels ---- */
+.grid2{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;margin-bottom:22px}
+@media(min-width:940px){.grid2{grid-template-columns:minmax(0,2.15fr) minmax(0,1fr)}}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:4px;padding:16px 18px 12px}
+.panel-h{display:flex;align-items:baseline;gap:12px;margin-bottom:4px;flex-wrap:wrap}
+.panel-h h2{font-size:15.5px;letter-spacing:-.005em}
+.panel-h .note{font-size:12.5px;color:var(--muted);margin-left:auto}
+.legend{display:flex;gap:14px;flex-wrap:wrap;margin:10px 0 4px}
+.legend span{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;color:var(--ink-2)}
+.legend i{width:9px;height:9px;border-radius:2px;flex:none}
+svg{display:block;width:100%;height:auto;overflow:visible}
+.tick{font-family:"IBM Plex Mono",monospace;font-size:10px;fill:var(--muted);
+  font-variant-numeric:tabular-nums}
+.dlabel{font-family:"IBM Plex Mono",monospace;font-size:10.5px;font-weight:600;fill:var(--ink-2)}
+.hit{fill:transparent;cursor:default}
+.hit:hover~.hl,.col.on .hl{opacity:1}
+.hl{fill:var(--surface-2);opacity:0;pointer-events:none}
+
+/* platform split */
+.split{margin-top:6px}
+.split-row{display:flex;align-items:center;gap:10px;margin:11px 0}
+.split-row .lbl{display:inline-flex;align-items:center;gap:7px;font-size:13px;width:82px;flex:none}
+.split-row .lbl i{width:9px;height:9px;border-radius:2px;flex:none}
+.split-row .track{flex:1;height:8px;background:var(--surface-2);border-radius:2px;overflow:hidden}
+.split-row .fill{display:block;height:100%;border-radius:2px}
+.split-row .n{font-family:"IBM Plex Mono",monospace;font-size:12.5px;color:var(--ink-2);
+  width:76px;text-align:right;font-variant-numeric:tabular-nums;flex:none}
+.split-sub{font-size:12px;color:var(--muted);margin-top:14px;padding-top:12px;border-top:1px solid var(--line)}
+.split-sub b{color:var(--ink-2);font-weight:600}
+
+/* ---- OTA updates ---- */
+.panel.ota{margin-bottom:22px;padding-bottom:6px}
+.ota-row{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:14px;align-items:center;
+  padding:11px 0;border-top:1px solid var(--line)}
+.ota-row:first-child{border-top:0}
+.ota-live{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:500;
+  font-family:"IBM Plex Mono",monospace;padding:3px 8px;border-radius:20px;
+  background:var(--surface-2);color:var(--muted);white-space:nowrap}
+.ota-live.on{background:var(--accent-soft);color:var(--accent-2)}
+.ota-live i{width:7px;height:7px;border-radius:50%;background:var(--st-idle);flex:none}
+.ota-live.on i{background:var(--st-good)}
+.ota-msg{font-size:14px;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ota-meta{font-size:12px;color:var(--muted);margin-top:2px;display:flex;gap:10px;flex-wrap:wrap}
+.ota-meta .sha{font-size:11.5px}
+.ota-right{text-align:right;font-family:"IBM Plex Mono",monospace;font-size:12px;
+  color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
+.rt{font-family:"IBM Plex Mono",monospace;font-size:11px;padding:2px 6px;border-radius:3px;
+  border:1px solid var(--line-2);color:var(--ink-2);white-space:nowrap}
+.ota-empty{padding:20px 0 24px;color:var(--muted);font-size:14px}
+.ota-empty code{background:var(--surface-2);border:1px solid var(--line);padding:2px 7px;
+  border-radius:3px;font-size:13px}
+
+/* ---- filters ---- */
+.filters{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
+.fgroup{display:flex;gap:4px;background:var(--surface-2);padding:3px;border-radius:4px}
+.fbtn{border:0;background:transparent;color:var(--muted);cursor:pointer;
+  font-family:"IBM Plex Mono",monospace;font-size:11.5px;letter-spacing:.05em;
+  padding:5px 10px;border-radius:3px;text-transform:uppercase}
+.fbtn:hover{color:var(--ink)}
+.fbtn[aria-pressed="true"]{background:var(--surface);color:var(--ink);box-shadow:var(--shadow)}
+.filters .count{margin-left:auto;font-size:12.5px;color:var(--muted);
+  font-family:"IBM Plex Mono",monospace}
+
+/* ---- table ---- */
+.tw{background:var(--surface);border:1px solid var(--line);border-radius:4px;overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:13.5px;min-width:880px}
+th{text-align:left;font-family:"IBM Plex Mono",monospace;font-size:10.5px;font-weight:600;
+  letter-spacing:.09em;text-transform:uppercase;color:var(--muted);padding:10px 14px;
+  border-bottom:1px solid var(--line-2);white-space:nowrap}
+td{padding:10px 14px;border-bottom:1px solid var(--line);color:var(--ink-2);vertical-align:middle}
+tbody tr:last-child td{border-bottom:none}
+tbody tr.active{background:linear-gradient(90deg,var(--accent-soft),transparent 70%)}
+.pill{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:500;
+  padding:3px 9px 3px 7px;border-radius:20px;background:var(--surface-2);white-space:nowrap}
+.pill i{width:7px;height:7px;border-radius:50%;flex:none}
+.pill.succeeded i{background:var(--st-good)} .pill.failed i{background:var(--st-crit)}
+.pill.running i{background:var(--st-warn);animation:pulse 1.4s ease-in-out infinite}
+.pill.queued i{background:var(--st-warn);opacity:.55}
+.pill.canceled i{background:var(--st-idle)}
+.plat{display:inline-flex;align-items:center;gap:7px;white-space:nowrap}
+.plat i{width:8px;height:8px;border-radius:2px;flex:none}
+.plat.ios i{background:var(--ios)} .plat.android i{background:var(--android)}
+td.num{font-family:"IBM Plex Mono",monospace;font-variant-numeric:tabular-nums;white-space:nowrap}
+.sha{font-family:"IBM Plex Mono",monospace;font-size:12px;color:var(--muted)}
+.msg{display:block;max-width:230px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  font-size:12.5px;color:var(--muted)}
+.tag{font-family:"IBM Plex Mono",monospace;font-size:11px;padding:2px 6px;border-radius:3px;
+  border:1px solid var(--line-2);color:var(--muted);white-space:nowrap}
+.sent{color:var(--st-good-ink);font-weight:500}
+.empty{padding:52px 24px;text-align:center;color:var(--muted)}
+.empty h2{font-size:17px;color:var(--ink);margin-bottom:6px}
+.empty code{background:var(--surface-2);border:1px solid var(--line);padding:2px 7px;border-radius:3px;font-size:13px}
+.tip{position:fixed;pointer-events:none;z-index:9;background:var(--surface);border:1px solid var(--line-2);
+  border-radius:4px;padding:9px 12px;font-size:12.5px;box-shadow:var(--shadow);opacity:0;transition:opacity .1s}
+.tip.on{opacity:1}
+.tip .d{font-family:"IBM Plex Mono",monospace;font-size:11px;color:var(--muted);
+  margin-bottom:5px;letter-spacing:.04em}
+.tip .r{display:flex;align-items:center;gap:7px;margin:2px 0}
+.tip .r i{width:8px;height:8px;border-radius:2px;flex:none}
+.tip .r b{margin-left:auto;font-family:"IBM Plex Mono",monospace;font-variant-numeric:tabular-nums}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <div class="bar">
+    <span class="brand">leas</span>
+    <span class="proj" id="proj">__PROJECT__</span>
+    <span class="sp"></span>
+    <span class="live off" id="live"><span class="dot"></span><span id="live-t">connecting</span></span>
+  </div>
+
+  <div class="tiles" id="tiles"></div>
+
+  <div class="grid2">
+    <div class="panel">
+      <div class="panel-h">
+        <h2>Builds per day</h2>
+        <span class="note">last 14 days</span>
+      </div>
+      <div class="legend">
+        <span><i style="background:var(--st-good)"></i>Succeeded</span>
+        <span><i style="background:var(--st-crit)"></i>Failed</span>
+        <span><i style="background:var(--st-warn)"></i>In progress</span>
+        <span><i style="background:var(--st-idle)"></i>Canceled</span>
+      </div>
+      <div id="chart"></div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-h"><h2>Platform &amp; channel</h2></div>
+      <div class="split" id="split"></div>
+    </div>
+  </div>
+
+  <div class="panel ota" id="ota-panel">
+    <div class="panel-h">
+      <h2>Over-the-air updates</h2>
+      <span class="note" id="ota-note"></span>
+    </div>
+    <div id="ota"></div>
+  </div>
+
+  <div class="filters" id="filters"></div>
+  <div class="tw" id="table"></div>
+</div>
+
+<div class="tip" id="tip"></div>
+
+<script>
+// Seed data is injected only into the shareable preview build. When the
+// dashboard is served by `leas dashboard`, the live fetch wins and this is null.
+const SEED = /*__SEED__*/ null;
+
+const F = { platform:'all', profile:'all', runner:'all', status:'all' };
+let DATA = null, DEMO = false;
+
+/* ---------- formatting ---------- */
+const pad = n => String(n).padStart(2,'0');
+function dur(ms){
+  if(ms==null) return '—';
+  const s=Math.round(ms/1000);
+  return s<60 ? s+'s' : Math.floor(s/60)+'m '+pad(s%60)+'s';
+}
+function ago(iso){
+  const s=Math.round((Date.now()-Date.parse(iso))/1000);
+  if(s<60) return s+'s ago';
+  if(s<3600) return Math.floor(s/60)+'m ago';
+  if(s<86400) return Math.floor(s/3600)+'h ago';
+  return Math.floor(s/86400)+'d ago';
+}
+const esc = s => String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+/* ---------- data ---------- */
+async function load(){
+  try{
+    const res = await fetch('/api/builds',{cache:'no-store'});
+    if(!res.ok) throw new Error(res.status);
+    DATA = await res.json(); DEMO = false;
+  }catch(e){
+    if(!SEED) throw e;
+    DATA = SEED; DEMO = true;
+  }
+  render();
+}
+
+function filtered(){
+  return DATA.builds.filter(b =>
+    (F.platform==='all'||b.platform===F.platform) &&
+    (F.profile==='all'||b.profile===F.profile) &&
+    (F.runner==='all'||b.runner===F.runner) &&
+    (F.status==='all'||b.status===F.status));
+}
+
+/* ---------- render ---------- */
+function render(){
+  const s = DATA.stats;
+  document.getElementById('proj').textContent = DATA.project;
+
+  const rate = s.successRate==null ? '—' : Math.round(s.successRate*100);
+  document.getElementById('tiles').innerHTML = [
+    tile('Total builds', s.total, s.last7Days+' in the last 7 days'),
+    tile('Success rate', rate==='—'?'—':rate+'<small>%</small>',
+         (s.byStatus.succeeded||0)+' succeeded · '+(s.byStatus.failed||0)+' failed'),
+    tile('Median build', dur(s.medianDurationMs), 'successful builds only'),
+    tile('Submitted', s.submitted, 'reached a store track'),
+    tile('In flight', s.inFlight, s.inFlight?'running now':'nothing building', s.inFlight>0),
+  ].join('');
+
+  chart(s.daily);
+  split(s);
+  ota();
+  filters();
+  table();
+}
+
+function tile(k,v,sub,hot){
+  return '<div class="tile'+(hot?' hot':'')+'"><span class="k">'+k+'</span>'+
+    '<div class="v">'+v+'</div><div class="sub">'+esc(sub)+'</div></div>';
+}
+
+/* ---------- chart: stacked bars, status-encoded ---------- */
+function chart(daily){
+  const W=680,H=196,PL=26,PR=8,PT=18,PB=26;
+  const iw=W-PL-PR, ih=H-PT-PB;
+  const max=Math.max(1,...daily.map(d=>d.total));
+  const ticks=niceTicks(max);
+  const top=ticks[ticks.length-1];
+  const bw=Math.min(26,(iw/daily.length)-8), step=iw/daily.length;
+  const y=v=>PT+ih-(v/top)*ih;
+  const order=[['succeeded','var(--st-good)'],['failed','var(--st-crit)'],
+               ['active','var(--st-warn)'],['canceled','var(--st-idle)']];
+  const peak=daily.reduce((a,d,i)=>d.total>daily[a].total?i:a,0);
+
+  let g='';
+  for(const t of ticks) g+='<line x1="'+PL+'" x2="'+(W-PR)+'" y1="'+y(t)+'" y2="'+y(t)+
+    '" stroke="var(--grid)" stroke-width="1"/><text class="tick" x="'+(PL-7)+'" y="'+(y(t)+3.5)+
+    '" text-anchor="end">'+t+'</text>';
+
+  let bars='';
+  daily.forEach((d,i)=>{
+    const cx=PL+step*i+step/2, x=cx-bw/2;
+    let acc=0, segs='', first=true;
+    for(const [key,color] of order){
+      const v=d[key]; if(!v) continue;
+      const h=(v/top)*ih, yy=y(acc+v);
+      // 2px surface gap between stacked segments; 4px rounded data-end on top only
+      segs = seg(x,yy,bw,Math.max(1,h-(acc?2:0)),first?4:0,color) + segs;
+      acc+=v; first=false;
+    }
+    const lbl = (i===daily.length-1||i===peak) && d.total
+      ? '<text class="dlabel" x="'+cx+'" y="'+(y(d.total)-7)+'" text-anchor="middle">'+d.total+'</text>' : '';
+    const day=new Date(d.date+'T12:00:00');
+    const dl = (i%2===0||i===daily.length-1)
+      ? '<text class="tick" x="'+cx+'" y="'+(H-PB+15)+'" text-anchor="middle">'+
+        (day.getMonth()+1)+'/'+day.getDate()+'</text>' : '';
+    bars+='<g class="col"><rect class="hl" x="'+(cx-step/2+1)+'" y="'+PT+'" width="'+(step-2)+
+      '" height="'+ih+'" rx="2"/>'+segs+lbl+dl+
+      '<rect class="hit" x="'+(cx-step/2)+'" y="'+PT+'" width="'+step+'" height="'+ih+
+      '" data-i="'+i+'"/></g>';
+  });
+
+  document.getElementById('chart').innerHTML =
+    '<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Builds per day for the last 14 days, '+
+    'stacked by outcome. Full data in the table below.">'+g+
+    '<line x1="'+PL+'" x2="'+(W-PR)+'" y1="'+y(0)+'" y2="'+y(0)+'" stroke="var(--axis)" stroke-width="1"/>'+
+    bars+'</svg>';
+
+  const tip=document.getElementById('tip');
+  document.querySelectorAll('#chart .hit').forEach(el=>{
+    el.addEventListener('mousemove',ev=>{
+      const d=daily[+el.dataset.i];
+      tip.innerHTML='<div class="d">'+new Date(d.date+'T12:00:00')
+        .toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric'})+'</div>'+
+        order.filter(([k])=>d[k]).map(([k,c])=>'<div class="r"><i style="background:'+c+'"></i>'+
+          ({succeeded:'Succeeded',failed:'Failed',active:'In progress',canceled:'Canceled'})[k]+
+          '<b>'+d[k]+'</b></div>').join('') ||
+        '<div class="r" style="color:var(--muted)">No builds</div>';
+      tip.classList.add('on');
+      tip.style.left=Math.min(ev.clientX+14,innerWidth-170)+'px';
+      tip.style.top=(ev.clientY-12)+'px';
+      el.closest('.col').classList.add('on');
+    });
+    el.addEventListener('mouseleave',()=>{tip.classList.remove('on');
+      el.closest('.col').classList.remove('on');});
+  });
+}
+
+/** Rect path with optionally rounded top corners, anchored to the baseline. */
+function seg(x,y,w,h,r,fill){
+  r=Math.min(r,h,w/2);
+  const d = r
+    ? 'M'+x+' '+(y+h)+'V'+(y+r)+'a'+r+' '+r+' 0 0 1 '+r+' '+(-r)+'h'+(w-2*r)+
+      'a'+r+' '+r+' 0 0 1 '+r+' '+r+'V'+(y+h)+'Z'
+    : 'M'+x+' '+(y+h)+'V'+y+'h'+w+'V'+(y+h)+'Z';
+  return '<path d="'+d+'" fill="'+fill+'"/>';
+}
+
+function niceTicks(max){
+  const stepChoices=[1,2,5,10,20,50,100];
+  const st=stepChoices.find(s=>max/s<=5)??Math.ceil(max/5);
+  const out=[]; for(let v=0;v<=Math.ceil(max/st)*st;v+=st) out.push(v);
+  return out;
+}
+
+/* ---------- platform + channel split ---------- */
+function split(s){
+  const tot=Math.max(1,s.total);
+  const row=(label,n,color)=>{
+    const pct=Math.round(n/tot*100);
+    return '<div class="split-row"><span class="lbl"><i style="background:'+color+'"></i>'+
+      label+'</span><span class="track"><span class="fill" style="width:'+
+      (n/tot*100)+'%;background:'+color+'"></span></span>'+
+      '<span class="n">'+n+' · '+pct+'%</span></div>';
+  };
+  const profiles=Object.entries(s.byProfile).sort((a,b)=>b[1]-a[1]);
+  document.getElementById('split').innerHTML =
+    row('iOS', s.byPlatform.ios||0, 'var(--ios)') +
+    row('Android', s.byPlatform.android||0, 'var(--android)') +
+    '<div class="split-sub">Channels &nbsp;·&nbsp; ' +
+    (profiles.map(([p,n])=>'<b>'+esc(p)+'</b> '+n).join(' &nbsp; ') || 'none yet') + '</div>';
+}
+
+/* ---------- over-the-air updates ---------- */
+function ota(){
+  const ups=DATA.updates||[];
+  const note=document.getElementById('ota-note');
+  const el=document.getElementById('ota');
+  if(!ups.length){
+    note.textContent='';
+    el.innerHTML='<div class="ota-empty">No updates published yet. '+
+      'Ship a JS-only change with <code>leas update --channel production</code>.</div>';
+    return;
+  }
+  const liveCount=ups.filter(u=>u.live).length;
+  note.textContent=ups.length+' published · '+liveCount+' serving now';
+  el.innerHTML=ups.slice(0,8).map(u=>{
+    const chans=(u.channels||[]).map(c=>'<span class="tag">'+esc(c)+'</span>').join(' ');
+    return '<div class="ota-row">'+
+      '<span class="ota-live'+(u.live?' on':'')+'"><i></i>'+(u.live?'serving':'superseded')+'</span>'+
+      '<div><div class="ota-msg">'+esc(u.message||'No message')+'</div>'+
+      '<div class="ota-meta">'+chans+'<span class="rt">runtime '+esc(u.runtimeVersion)+'</span>'+
+      '<span>'+esc((u.platforms||[]).join(' + '))+'</span>'+
+      (u.git?.commit?'<span class="sha">'+esc(u.git.commit)+'</span>':'')+
+      (u.promotedFrom?'<span>promoted from '+esc(u.promotedFrom)+'</span>':'')+
+      '</div></div>'+
+      '<div class="ota-right">'+ago(u.createdAt)+'<br>'+
+      (u.bytes?(u.bytes/1e6).toFixed(1)+' MB':'')+'</div></div>';
+  }).join('');
+}
+
+/* ---------- filters ---------- */
+function filters(){
+  const groups=[
+    ['platform',['all','ios','android']],
+    ['profile',['all',...Object.keys(DATA.stats.byProfile)]],
+    ['runner',['all','local','cloud']],
+    ['status',['all','succeeded','failed','running']],
+  ];
+  const n=filtered().length;
+  document.getElementById('filters').innerHTML =
+    groups.map(([key,vals])=>'<div class="fgroup">'+vals.map(v=>
+      '<button class="fbtn" data-k="'+key+'" data-v="'+v+'" aria-pressed="'+
+      (F[key]===v)+'">'+(v==='all'?key:v)+'</button>').join('')+'</div>').join('')+
+    '<span class="count">'+n+' of '+DATA.builds.length+' builds</span>';
+
+  document.querySelectorAll('.fbtn').forEach(b=>b.onclick=()=>{
+    F[b.dataset.k]=b.dataset.v; filters(); table();
+  });
+}
+
+/* ---------- table ---------- */
+function table(){
+  const rows=filtered();
+  if(!rows.length){
+    document.getElementById('table').innerHTML='<div class="empty"><h2>'+
+      (DATA.builds.length?'No builds match these filters':'No builds yet')+'</h2><p>'+
+      (DATA.builds.length?'Clear a filter to see the rest.'
+        :'Run <code>leas build --platform all</code> and it will appear here the moment it starts.')+
+      '</p></div>';
+    return;
+  }
+  document.getElementById('table').innerHTML='<table><thead><tr>'+
+    ['Status','Platform','Channel','Where','Version','Commit','Duration','Submitted','Started']
+      .map(h=>'<th>'+h+'</th>').join('')+'</tr></thead><tbody>'+
+    rows.map(b=>{
+      const live=['queued','running'].includes(b.status);
+      const elapsed=live?Date.now()-Date.parse(b.startedAt||b.createdAt):b.durationMs;
+      const sub=b.submission||{};
+      return '<tr class="'+(live?'active':'')+'">'+
+        '<td><span class="pill '+b.status+'"><i></i>'+b.status+'</span></td>'+
+        '<td><span class="plat '+b.platform+'"><i></i>'+(b.platform==='ios'?'iOS':'Android')+'</span></td>'+
+        '<td><span class="tag">'+esc(b.profile)+'</span></td>'+
+        '<td>'+(b.runner==='cloud'?'Cloud':'Local')+'</td>'+
+        '<td class="num">'+esc(b.app?.version||'—')+
+          (b.app?.buildNumber?' <span class="sha">('+esc(b.app.buildNumber)+')</span>':'')+'</td>'+
+        '<td><span class="sha">'+esc(b.git?.commit||'—')+(b.git?.dirty?' *':'')+'</span>'+
+          '<span class="msg">'+esc(b.git?.message||'')+'</span></td>'+
+        '<td class="num" data-live="'+(live?1:0)+'" data-start="'+(b.startedAt||b.createdAt)+'">'+
+          dur(elapsed)+'</td>'+
+        '<td>'+(sub.status==='submitted'
+          ? '<span class="sent">'+esc(sub.track||'sent')+'</span>'
+          : sub.status==='failed' ? '<span style="color:var(--st-crit)">failed</span>'
+          : '<span style="color:var(--muted)">—</span>')+'</td>'+
+        '<td class="num">'+ago(b.createdAt)+'</td></tr>';
+    }).join('')+'</tbody></table>';
+}
+
+/* ---------- live ---------- */
+function setLive(state,text){
+  const el=document.getElementById('live');
+  el.className='live '+state;
+  document.getElementById('live-t').textContent=text;
+}
+
+function connect(){
+  if(DEMO){ setLive('demo','preview data'); return; }
+  const es=new EventSource('/api/stream');
+  es.onopen=()=>setLive('on','live');
+  es.addEventListener('builds',load);
+  es.onerror=()=>setLive('off','reconnecting');
+}
+
+// Elapsed timers for in-flight builds tick locally so a running build always
+// looks like it is moving, without a request per second.
+setInterval(()=>{
+  document.querySelectorAll('td[data-live="1"]').forEach(td=>{
+    td.textContent=dur(Date.now()-Date.parse(td.dataset.start));
+  });
+},1000);
+
+load().then(connect).catch(()=>setLive('off','no data source'));
+</script>
+</body>
+</html>

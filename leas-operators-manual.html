@@ -1,0 +1,1103 @@
+<title>leas Operator's Manual</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@600;700&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap">
+<style>
+:root{
+  --ground:#F1F3F1; --surface:#FFFFFF; --surface-2:#E7EBE9;
+  --ink:#141A19; --ink-2:#394644; --muted:#687573;
+  --line:#D5DBD8; --line-2:#B7C0BD;
+  --accent:#0B6E63; --accent-2:#084F47; --accent-soft:#DCEBE7;
+  --signal:#A8401A; --signal-soft:#F7E5DC;
+  --apple:#2E3A46; --android:#8A6410;
+  --code-bg:#111917; --code-ink:#DCE7E4; --code-line:#26332F; --code-cue:#5E8F86;
+  --shadow:0 1px 2px rgba(20,26,25,.05), 0 8px 24px -16px rgba(20,26,25,.35);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ground:#0E1211; --surface:#151B1A; --surface-2:#1C2422;
+    --ink:#E9EFED; --ink-2:#BFCAC7; --muted:#8B9997;
+    --line:#252F2D; --line-2:#36423F;
+    --accent:#4FBFAE; --accent-2:#7FD6C8; --accent-soft:#12302C;
+    --signal:#E08159; --signal-soft:#301810;
+    --apple:#9AAEBF; --android:#D9AE4E;
+    --code-bg:#080C0B; --code-ink:#D6E3E0; --code-line:#1E2826; --code-cue:#4E7E75;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px -16px rgba(0,0,0,.8);
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#0E1211; --surface:#151B1A; --surface-2:#1C2422;
+  --ink:#E9EFED; --ink-2:#BFCAC7; --muted:#8B9997;
+  --line:#252F2D; --line-2:#36423F;
+  --accent:#4FBFAE; --accent-2:#7FD6C8; --accent-soft:#12302C;
+  --signal:#E08159; --signal-soft:#301810;
+  --apple:#9AAEBF; --android:#D9AE4E;
+  --code-bg:#080C0B; --code-ink:#D6E3E0; --code-line:#1E2826; --code-cue:#4E7E75;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px -16px rgba(0,0,0,.8);
+}
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--ground); color:var(--ink);
+  font-family:"IBM Plex Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  font-size:16.5px; line-height:1.62; -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:1180px; margin:0 auto; padding:0 28px 120px;
+  display:grid; grid-template-columns:1fr; gap:0;}
+@media(min-width:1040px){
+  .wrap{grid-template-columns:216px minmax(0,1fr); gap:56px; padding-right:40px;}
+}
+h1,h2,h3,h4{font-family:"IBM Plex Sans Condensed","IBM Plex Sans",sans-serif;
+  font-weight:700; text-wrap:balance; margin:0;}
+code,kbd,pre,.mono{font-family:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;}
+
+/* ---------- masthead ---------- */
+header.top{grid-column:1/-1; padding:64px 0 40px; border-bottom:2px solid var(--ink);}
+.wordmark{font-family:"IBM Plex Mono",monospace; font-weight:600; font-size:15px;
+  letter-spacing:.14em; text-transform:uppercase; color:var(--accent); margin-bottom:20px;}
+h1{font-size:clamp(40px,7vw,68px); line-height:1.02; letter-spacing:-.02em;}
+.lede{margin:20px 0 0; max-width:62ch; font-size:19px; color:var(--ink-2);}
+.meta{display:flex; flex-wrap:wrap; gap:8px; margin-top:28px;}
+.chip{font-family:"IBM Plex Mono",monospace; font-size:11.5px; letter-spacing:.06em;
+  text-transform:uppercase; padding:5px 10px; border:1px solid var(--line-2);
+  border-radius:2px; color:var(--muted);}
+
+/* ---------- nav rail ---------- */
+nav.rail{display:none;}
+@media(min-width:1040px){
+  nav.rail{display:block; align-self:start; position:sticky; top:0; padding-top:44px;
+    max-height:100vh; overflow-y:auto;}
+}
+nav.rail ol{list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:1px;}
+nav.rail a{display:block; padding:6px 0 6px 12px; border-left:2px solid var(--line);
+  color:var(--muted); text-decoration:none; font-size:13.5px; line-height:1.35;}
+nav.rail a:hover{color:var(--accent); border-left-color:var(--accent);}
+nav.rail .rail-head{font-family:"IBM Plex Mono",monospace; font-size:11px; letter-spacing:.12em;
+  text-transform:uppercase; color:var(--muted); padding:18px 0 8px 12px;}
+
+/* ---------- content ---------- */
+main{min-width:0; padding-top:44px; display:flex; flex-direction:column; gap:56px;}
+section{scroll-margin-top:24px;}
+.sec-head{display:flex; align-items:baseline; gap:14px; margin-bottom:8px;
+  padding-bottom:10px; border-bottom:1px solid var(--line-2);}
+.sec-num{font-family:"IBM Plex Mono",monospace; font-size:13px; font-weight:600;
+  color:var(--accent); letter-spacing:.05em; flex:none;}
+h2{font-size:clamp(26px,3.4vw,34px); letter-spacing:-.015em; line-height:1.14;}
+h3{font-size:20px; margin:34px 0 6px; letter-spacing:-.005em;}
+h4{font-size:15.5px; margin:24px 0 4px; font-family:"IBM Plex Sans",sans-serif; font-weight:600;}
+p{margin:12px 0; max-width:70ch;}
+main ul,main ol{max-width:70ch; padding-left:22px; margin:12px 0;}
+main li{margin:6px 0;}
+strong{font-weight:600;}
+a{color:var(--accent); text-underline-offset:2px;}
+.small{font-size:14.5px; color:var(--muted);}
+
+/* ---------- code ---------- */
+pre{background:var(--code-bg); color:var(--code-ink); padding:16px 18px; border-radius:3px;
+  overflow-x:auto; font-size:13.5px; line-height:1.65; margin:14px 0;
+  border:1px solid var(--code-line);}
+pre .c{color:var(--code-cue);}
+p code,li code,td code,th code{background:var(--surface-2); border:1px solid var(--line);
+  padding:1px 5px; border-radius:2px; font-size:.875em; white-space:nowrap;}
+
+/* ---------- tables ---------- */
+.tw{overflow-x:auto; margin:18px 0; border:1px solid var(--line); border-radius:3px;
+  background:var(--surface);}
+table{border-collapse:collapse; width:100%; font-size:14.5px; min-width:560px;}
+th{text-align:left; font-family:"IBM Plex Mono",monospace; font-size:11px; font-weight:600;
+  letter-spacing:.09em; text-transform:uppercase; color:var(--muted);
+  padding:11px 14px; border-bottom:1px solid var(--line-2); vertical-align:bottom;}
+td{padding:11px 14px; border-bottom:1px solid var(--line); vertical-align:top; color:var(--ink-2);}
+tbody tr:last-child td{border-bottom:none;}
+td strong{color:var(--ink);}
+
+/* ---------- steps ---------- */
+.step{display:grid; grid-template-columns:34px minmax(0,1fr); gap:16px; margin:30px 0;}
+.step-n{font-family:"IBM Plex Mono",monospace; font-weight:600; font-size:13px;
+  color:var(--surface); background:var(--accent); width:26px; height:26px; border-radius:2px;
+  display:flex; align-items:center; justify-content:center; margin-top:3px;}
+.step-b{min-width:0;}
+.step-b > :first-child{margin-top:0;}
+.step h3{margin:0 0 4px; font-size:18px;}
+
+/* ---------- callouts ---------- */
+.note{border-left:3px solid var(--accent); background:var(--accent-soft);
+  padding:13px 16px; margin:18px 0; border-radius:0 3px 3px 0; max-width:70ch;}
+.note.warn{border-left-color:var(--signal); background:var(--signal-soft);}
+.note.apple{border-left-color:var(--apple); background:var(--surface-2);}
+.note.android{border-left-color:var(--android); background:var(--surface-2);}
+.note > :first-child{margin-top:0;} .note > :last-child{margin-bottom:0;}
+.note-l{font-family:"IBM Plex Mono",monospace; font-size:11px; letter-spacing:.1em;
+  text-transform:uppercase; font-weight:600; display:block; margin-bottom:3px;}
+.note .note-l{color:var(--accent-2);}
+.note.warn .note-l{color:var(--signal);}
+.note.apple .note-l{color:var(--apple);}
+.note.android .note-l{color:var(--android);}
+
+/* ---------- misc blocks ---------- */
+.cards{display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:14px; margin:20px 0;}
+.card{background:var(--surface); border:1px solid var(--line); border-radius:3px; padding:16px 18px;}
+.card h4{margin:0 0 6px;}
+.card p{margin:0; font-size:14.5px; color:var(--ink-2);}
+.card .k{font-family:"IBM Plex Mono",monospace; font-size:11px; letter-spacing:.1em;
+  text-transform:uppercase; color:var(--muted); display:block; margin-bottom:8px;}
+.diagram{background:var(--surface); border:1px solid var(--line); border-radius:3px;
+  padding:20px; margin:22px 0; overflow-x:auto;}
+.phase{border-top:1px solid var(--line); padding:16px 0; display:grid;
+  grid-template-columns:104px minmax(0,1fr); gap:20px;}
+@media(max-width:640px){.phase{grid-template-columns:1fr; gap:4px;}}
+.phase-k{font-family:"IBM Plex Mono",monospace; font-size:12px; color:var(--accent);
+  font-weight:600; letter-spacing:.04em;}
+.phase-k span{display:block; color:var(--muted); font-weight:400; letter-spacing:0; margin-top:2px;}
+.phase h4{margin:0 0 4px;}
+.phase p{margin:0; font-size:14.5px;}
+footer{grid-column:1/-1; margin-top:72px; padding-top:24px; border-top:2px solid var(--ink);
+  color:var(--muted); font-size:14px; display:flex; flex-wrap:wrap; gap:6px 24px;}
+:focus-visible{outline:2px solid var(--accent); outline-offset:2px;}
+@media(prefers-reduced-motion:reduce){*{animation:none!important; transition:none!important;}}
+</style>
+
+<div class="wrap">
+
+<header class="top">
+  <div class="wordmark">leas &nbsp;/&nbsp; operator's manual</div>
+  <h1>Build it, sign it, ship it.</h1>
+  <p class="lede">Everything needed to run <strong>leas</strong> — the self-hosted build and submit
+  pipeline for Expo and React Native apps. How it works, how to set it up from nothing, how to change
+  your keys when they expire, and how to move the whole thing to a different organization.</p>
+  <div class="meta">
+    <span class="chip">v0.1.0</span>
+    <span class="chip">iOS + Android</span>
+    <span class="chip">Local + cloud</span>
+    <span class="chip">Single-tenant</span>
+    <span class="chip">Live dashboard</span>
+    <span class="chip">OTA updates</span>
+  </div>
+</header>
+
+<nav class="rail">
+  <div class="rail-head">Contents</div>
+  <ol>
+    <li><a href="#model">1 &nbsp;The mental model</a></li>
+    <li><a href="#accounts">2 &nbsp;Accounts you need</a></li>
+    <li><a href="#setup">3 &nbsp;First-time setup</a></li>
+    <li><a href="#daily">4 &nbsp;Everyday commands</a></li>
+    <li><a href="#dash">5 &nbsp;The dashboard</a></li>
+    <li><a href="#updates">6 &nbsp;Over-the-air updates</a></li>
+    <li><a href="#identity">7 &nbsp;Where login lives</a></li>
+    <li><a href="#rotate">8 &nbsp;Changing your keys</a></li>
+    <li><a href="#org">9 &nbsp;Changing organization</a></li>
+    <li><a href="#people">10 &nbsp;Adding &amp; removing people</a></li>
+    <li><a href="#broken">11 &nbsp;When it breaks</a></li>
+    <li><a href="#market">12 &nbsp;Going to market</a></li>
+    <li><a href="#ref">13 &nbsp;Reference</a></li>
+  </ol>
+</nav>
+
+<main>
+
+<!-- ============ 1 ============ -->
+<section id="model">
+  <div class="sec-head"><span class="sec-num">01</span><h2>The mental model</h2></div>
+
+  <p>Expo's EAS looks like magic from the outside. It isn't. Underneath, it is exactly three things,
+  and once you see them separately the whole tool becomes obvious.</p>
+
+  <div class="cards">
+    <div class="card"><span class="k">Part one</span><h4>The engine</h4>
+      <p>Generate native projects, then run <code>xcodebuild</code> or <code>gradle</code> and produce
+      a signed <code>.ipa</code> or <code>.aab</code>. Ordinary scripting.</p></div>
+    <div class="card"><span class="k">Part two</span><h4>The credentials</h4>
+      <p>Certificates, provisioning profiles, keystores, API keys. Getting these right is most of the
+      real difficulty.</p></div>
+    <div class="card"><span class="k">Part three</span><h4>The fleet</h4>
+      <p>Machines to run the engine on. Linux for Android. And — unavoidably — real Macs for iOS.</p></div>
+  </div>
+
+  <h3>Why "local" and "cloud" are the same thing</h3>
+  <p>The single most useful decision in leas: a cloud build is not a separate system. When you run
+  <code>leas build --cloud</code>, leas dispatches a GitHub Actions job whose body is literally
+  <code>leas build --local</code> on a rented Mac. One engine, two machines.</p>
+  <p>This matters more than it sounds. In most build tools, local and cloud drift apart until "works
+  on my machine" becomes a permanent tax. Here they cannot drift, because there is only one code path.</p>
+
+  <div class="diagram">
+  <svg viewBox="0 0 720 210" width="100%" style="max-width:720px; height:auto;" role="img"
+       aria-label="leas build dispatches to either your Mac locally or a rented Mac and Linux runner in the cloud; both run the identical build engine and produce a signed artifact that is submitted to the App Store or Google Play.">
+    <defs>
+      <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+        <path d="M0,0 L10,5 L0,10 z" fill="currentColor"/>
+      </marker>
+    </defs>
+    <g font-family="IBM Plex Mono, monospace" font-size="11.5" fill="currentColor" color="currentColor">
+      <rect x="1" y="80" width="130" height="46" rx="2" fill="none" stroke="currentColor" stroke-width="1.4"/>
+      <text x="66" y="99" text-anchor="middle" font-weight="600">leas build</text>
+      <text x="66" y="114" text-anchor="middle" opacity=".62">one command</text>
+
+      <path d="M133 96 L186 60" stroke="currentColor" stroke-width="1.2" fill="none" marker-end="url(#ar)" opacity=".55"/>
+      <path d="M133 110 L186 146" stroke="currentColor" stroke-width="1.2" fill="none" marker-end="url(#ar)" opacity=".55"/>
+      <text x="150" y="52" font-size="10" opacity=".62">--local</text>
+      <text x="150" y="170" font-size="10" opacity=".62">--cloud</text>
+
+      <rect x="190" y="20" width="168" height="58" rx="2" fill="none" stroke="currentColor" stroke-width="1.4"/>
+      <text x="274" y="40" text-anchor="middle" font-weight="600">Your Mac</text>
+      <text x="274" y="56" text-anchor="middle" opacity=".62">free, instant, offline</text>
+
+      <rect x="190" y="124" width="168" height="70" rx="2" fill="none" stroke="currentColor" stroke-width="1.4" stroke-dasharray="3 3"/>
+      <text x="274" y="144" text-anchor="middle" font-weight="600">Rented fleet</text>
+      <text x="274" y="160" text-anchor="middle" opacity=".62">macOS runner (iOS)</text>
+      <text x="274" y="175" text-anchor="middle" opacity=".62">Linux runner (Android)</text>
+
+      <path d="M360 49 L410 90" stroke="currentColor" stroke-width="1.2" fill="none" marker-end="url(#ar)" opacity=".55"/>
+      <path d="M360 159 L410 118" stroke="currentColor" stroke-width="1.2" fill="none" marker-end="url(#ar)" opacity=".55"/>
+
+      <rect x="414" y="80" width="130" height="46" rx="2" fill="none" stroke="currentColor" stroke-width="2"/>
+      <text x="479" y="99" text-anchor="middle" font-weight="600">Same engine</text>
+      <text x="479" y="114" text-anchor="middle" opacity=".62">signed artifact</text>
+
+      <path d="M546 96 L596 62" stroke="currentColor" stroke-width="1.2" fill="none" marker-end="url(#ar)" opacity=".55"/>
+      <path d="M546 110 L596 144" stroke="currentColor" stroke-width="1.2" fill="none" marker-end="url(#ar)" opacity=".55"/>
+
+      <rect x="600" y="38" width="118" height="44" rx="2" fill="none" stroke="currentColor" stroke-width="1.4"/>
+      <text x="659" y="58" text-anchor="middle" font-weight="600">App Store</text>
+      <text x="659" y="72" text-anchor="middle" opacity=".62">Connect</text>
+
+      <rect x="600" y="124" width="118" height="44" rx="2" fill="none" stroke="currentColor" stroke-width="1.4"/>
+      <text x="659" y="144" text-anchor="middle" font-weight="600">Google Play</text>
+      <text x="659" y="158" text-anchor="middle" opacity=".62">Console</text>
+    </g>
+  </svg>
+  </div>
+
+  <div class="note warn">
+    <span class="note-l">The one thing you cannot build around</span>
+    <p>Apple's macOS licence forbids running macOS on non-Apple hardware. So every "cloud iOS build"
+    on earth — Expo's included — is <em>somebody's real Mac</em>. You are not missing a trick; there
+    isn't one. Your only decision is whose Mac you rent.</p>
+  </div>
+</section>
+
+<!-- ============ 2 ============ -->
+<section id="accounts">
+  <div class="sec-head"><span class="sec-num">02</span><h2>Accounts you need before you start</h2></div>
+  <p>Five accounts. Two cost money. Get these open before touching the CLI, because approval on the
+  Apple side is the slowest step in the whole process and can take days.</p>
+
+  <div class="tw"><table>
+    <thead><tr><th>Account</th><th>Cost</th><th>What it gives you</th><th>Watch out for</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Apple Developer Program</strong></td><td>$99 / year</td>
+        <td>Certificates, provisioning profiles, the right to ship to the App Store.</td>
+        <td>Enrolling as a <em>company</em> needs a D-U-N-S number and a legal entity. That can take
+        a week or more. Enrolling as an individual is instant but puts your personal name on the
+        listing, and converting later is painful.</td></tr>
+      <tr><td><strong>App Store Connect</strong></td><td>included</td>
+        <td>The app record, TestFlight, review submission, and the API key leas uploads with.</td>
+        <td>Comes with the Developer Program — same login, different site.</td></tr>
+      <tr><td><strong>Google Play Console</strong></td><td>$25 once</td>
+        <td>The Play listing, release tracks, and Play App Signing.</td>
+        <td>New personal accounts may face additional identity and testing requirements before public
+        release. Check current policy when you enrol.</td></tr>
+      <tr><td><strong>Google Cloud</strong></td><td>free</td>
+        <td>Hosts the <em>service account</em> that leas authenticates to Play with.</td>
+        <td>Creating it here is only half the job — you must also grant it access inside Play Console.</td></tr>
+      <tr><td><strong>GitHub</strong></td><td>free tier works</td>
+        <td>Your build fleet and your secret store.</td>
+        <td>macOS runner minutes bill at a multiple of Linux minutes on private repos.</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<!-- ============ 3 ============ -->
+<section id="setup">
+  <div class="sec-head"><span class="sec-num">03</span><h2>First-time setup</h2></div>
+  <p>Do these in order — each step depends on the one before it. Budget about ninety minutes the
+  first time, most of it spent in Apple and Google's web consoles rather than the terminal.</p>
+
+  <div class="step"><div class="step-n">1</div><div class="step-b">
+    <h3>Install leas into your app</h3>
+    <p>From your Expo or React Native project directory:</p>
+<pre><span class="c"># point at your local checkout of leas</span>
+npm install --save-dev file:../leas
+npx leas init</pre>
+    <p><code>leas init</code> writes a <code>leas.json</code>. Its shape deliberately mirrors
+    <code>eas.json</code> — profiles, <code>extends</code>, and per-platform blocks all behave the
+    same — so an existing Expo project migrates with little more than a rename.</p>
+  </div></div>
+
+  <div class="step"><div class="step-n">2</div><div class="step-b">
+    <h3>Create a folder for credentials — and never commit it</h3>
+<pre>mkdir -p credentials/ios credentials/android
+grep -q '^credentials/' .gitignore || echo 'credentials/' &gt;&gt; .gitignore</pre>
+    <div class="note warn"><span class="note-l">Do this before you download anything</span>
+    <p>A distribution certificate committed to a repo is a certificate you have to revoke. Set the
+    ignore rule first, download second.</p></div>
+  </div></div>
+
+  <div class="step"><div class="step-n">3</div><div class="step-b">
+    <h3>Apple — create your distribution certificate</h3>
+    <p>This is the identity that says "this build genuinely came from our team." Generate the key
+    locally so the private half never leaves your machine:</p>
+<pre>openssl req -new -newkey rsa:2048 -nodes \
+  -keyout credentials/ios/dist.key \
+  -out credentials/ios/dist.csr \
+  -subj "/emailAddress=you@yourcompany.com/CN=Your Company/C=US"</pre>
+    <p>Go to <strong>developer.apple.com → Certificates, IDs &amp; Profiles → Certificates → +</strong>,
+    choose <strong>Apple Distribution</strong>, upload <code>dist.csr</code>, and download the
+    resulting <code>.cer</code>. Then combine the two halves into the <code>.p12</code> leas uses:</p>
+<pre>openssl x509 -in ~/Downloads/distribution.cer -inform DER \
+  -out credentials/ios/dist.pem -outform PEM
+
+openssl pkcs12 -export \
+  -inkey credentials/ios/dist.key \
+  -in credentials/ios/dist.pem \
+  -out credentials/ios/dist.p12 \
+  -passout pass:CHOOSE_A_PASSWORD</pre>
+    <div class="note apple"><span class="note-l">Apple</span>
+    <p>A team can hold only a small number of distribution certificates at once — historically two.
+    If the button is greyed out, someone on your team already used the slots. Find out who before you
+    revoke anything: revoking a certificate instantly invalidates every provisioning profile built
+    on it, which breaks everyone else's builds.</p></div>
+  </div></div>
+
+  <div class="step"><div class="step-n">4</div><div class="step-b">
+    <h3>Apple — register the app and create a provisioning profile</h3>
+    <p>Still in <strong>Certificates, IDs &amp; Profiles</strong>:</p>
+    <ul>
+      <li><strong>Identifiers → +</strong> — register your bundle ID (for example
+      <code>com.yourcompany.app</code>). It must match <code>ios.bundleIdentifier</code> in your
+      <code>app.json</code> exactly.</li>
+      <li><strong>Profiles → + → App Store Connect</strong> — pick that identifier, pick the
+      distribution certificate from step 3, name it something you will recognise in a year, and
+      download the <code>.mobileprovision</code> into <code>credentials/ios/</code>.</li>
+    </ul>
+    <p>A provisioning profile is just the notarised statement "this certificate may ship this app."
+    That is why it dies whenever either half changes.</p>
+  </div></div>
+
+  <div class="step"><div class="step-n">5</div><div class="step-b">
+    <h3>Apple — create the App Store Connect API key</h3>
+    <p>This is what leas uses to upload. Go to <strong>App Store Connect → Users and Access →
+    Integrations → App Store Connect API</strong>, choose <strong>Team Keys</strong>, and generate a
+    key with the <strong>App Manager</strong> role.</p>
+    <p>Record three things:</p>
+    <ul>
+      <li>The <strong>Key ID</strong> — a short code like <code>ABCD1234EF</code>.</li>
+      <li>The <strong>Issuer ID</strong> — a UUID shown above the key list, shared by all your keys.</li>
+      <li>The <strong>.p8 file</strong> itself.</li>
+    </ul>
+    <div class="note warn"><span class="note-l">You get exactly one download</span>
+    <p>Apple lets you download the <code>.p8</code> once and never again. Save it to
+    <code>credentials/ios/</code> and put a copy in your password manager in the same minute. If you
+    lose it, the only path forward is revoking the key and issuing a new one.</p></div>
+  </div></div>
+
+  <div class="step"><div class="step-n">6</div><div class="step-b">
+    <h3>Android — create your upload keystore</h3>
+<pre>keytool -genkeypair -v \
+  -keystore credentials/android/upload.keystore \
+  -alias upload -keyalg RSA -keysize 2048 -validity 10000 \
+  -dname "CN=Your Company, O=Your Company, C=US"</pre>
+    <p>You will be prompted for a password. Use the same one for the store and the key unless you
+    have a reason not to — it keeps the configuration simpler.</p>
+    <div class="note android"><span class="note-l">Android</span>
+    <p>With Play App Signing enabled (the default for new apps), Google holds the real
+    <em>app signing key</em> and you hold this <em>upload key</em>. That split is a gift: if you ever
+    lose the upload key, you request a reset and carry on. Losing the app signing key in the old
+    world meant you could never update your app again.</p></div>
+  </div></div>
+
+  <div class="step"><div class="step-n">7</div><div class="step-b">
+    <h3>Android — create the Play service account and grant it access</h3>
+    <p>Two halves, in two different consoles. Missing the second half is the single most common
+    setup mistake.</p>
+    <p><strong>In Google Cloud</strong> — <em>IAM &amp; Admin → Service Accounts → Create</em>. Then
+    open it, go to <strong>Keys → Add key → Create new key → JSON</strong>, and save the download to
+    <code>credentials/android/play-service-account.json</code>. Note the account's email, which looks
+    like <code>leas-publisher@your-project.iam.gserviceaccount.com</code>.</p>
+    <p><strong>In Play Console</strong> — <em>Users and permissions → Invite new users</em>. Paste
+    that service account email, grant it access to your app, and give it the release permissions
+    (at minimum: view app information and manage releases for the tracks you intend to publish to).</p>
+    <div class="note"><span class="note-l">Why this trips everyone</span>
+    <p>Creating the service account in Google Cloud gives it an identity but no authority. If leas
+    reports <code>403 · The caller does not have permission</code>, you have almost certainly done
+    the first half and not the second.</p></div>
+  </div></div>
+
+  <div class="step"><div class="step-n">8</div><div class="step-b">
+    <h3>Fill in leas.json</h3>
+    <p>Point the config at what you just created. Copy <code>leas.example.json</code> as your
+    starting point and edit the identifiers:</p>
+<pre>"submit": {
+  "production": {
+    "ios": {
+      "ascAppId": "1234567890",            <span class="c">// from the App Store Connect URL</span>
+      "ascApiKeyId": "ABCD1234EF",
+      "ascApiIssuerId": "69a6de70-...",
+      "ascApiKeyPath": "credentials/ios/AuthKey_ABCD1234EF.p8",
+      "waitForProcessing": true
+    },
+    "android": {
+      "packageName": "com.yourcompany.app",
+      "serviceAccountKeyPath": "credentials/android/play-service-account.json",
+      "track": "internal"
+    }
+  }
+}</pre>
+  </div></div>
+
+  <div class="step"><div class="step-n">9</div><div class="step-b">
+    <h3>Build locally first</h3>
+    <p>Always prove it works on your own machine before involving the cloud. Local failures give you
+    the full error; cloud failures give you a log you have to go read.</p>
+<pre>export LEAS_IOS_DIST_CERT_PASSWORD='the password from step 3'
+export LEAS_ANDROID_KEYSTORE_PASSWORD='the password from step 6'
+export LEAS_ANDROID_KEY_ALIAS='upload'
+
+npx leas build --platform android --profile production
+npx leas build --platform ios --profile production</pre>
+    <p>Artifacts land in <code>.leas/build/</code>. When both succeed, submit one by hand to confirm
+    the upload credentials work end to end:</p>
+<pre>npx leas submit --platform android --profile production</pre>
+  </div></div>
+
+  <div class="step"><div class="step-n">10</div><div class="step-b">
+    <h3>Upload your secrets and turn on the cloud</h3>
+    <p>Same credentials, different delivery. Everything moves as base64 so it survives being an
+    environment variable:</p>
+<pre>base64 -i credentials/ios/dist.p12          | gh secret set LEAS_IOS_DIST_CERT_BASE64
+base64 -i credentials/ios/profile.mobileprovision | gh secret set LEAS_IOS_PROVISIONING_PROFILE_BASE64
+base64 -i credentials/ios/AuthKey_ABCD1234EF.p8   | gh secret set LEAS_ASC_API_KEY_BASE64
+base64 -i credentials/android/upload.keystore     | gh secret set LEAS_ANDROID_KEYSTORE_BASE64
+base64 -i credentials/android/play-service-account.json | gh secret set LEAS_PLAY_SERVICE_ACCOUNT_BASE64
+
+gh secret set LEAS_IOS_DIST_CERT_PASSWORD
+gh secret set LEAS_ANDROID_KEYSTORE_PASSWORD
+gh secret set LEAS_ANDROID_KEY_ALIAS
+gh secret set LEAS_ANDROID_KEY_PASSWORD
+gh secret set LEAS_ASC_KEY_ID
+gh secret set LEAS_ASC_ISSUER_ID</pre>
+    <p>Then ship the whole thing from one command:</p>
+<pre>npx leas build --platform all --profile production --auto-submit --cloud</pre>
+  </div></div>
+</section>
+
+<!-- ============ 4 ============ -->
+<section id="daily">
+  <div class="sec-head"><span class="sec-num">04</span><h2>Everyday commands</h2></div>
+
+  <div class="tw"><table>
+    <thead><tr><th>Command</th><th>What it does</th></tr></thead>
+    <tbody>
+      <tr><td><code>leas build -p ios</code></td><td>Build on this machine using the <code>production</code> profile.</td></tr>
+      <tr><td><code>leas build -p all --cloud</code></td><td>Build both platforms on the rented fleet, then download the artifacts.</td></tr>
+      <tr><td><code>leas build -p all --auto-submit</code></td><td>Build, then upload to both stores the moment each build succeeds.</td></tr>
+      <tr><td><code>leas build --profile preview</code></td><td>Use a different profile — <code>preview</code> ships ad-hoc iOS and an installable APK.</td></tr>
+      <tr><td><code>leas submit -p ios</code></td><td>Upload the most recent artifact without rebuilding.</td></tr>
+      <tr><td><code>leas submit --path build.aab</code></td><td>Upload a specific file — useful when re-submitting an approved build.</td></tr>
+      <tr><td><code>leas update --channel production</code></td><td>Ship a JS-only change to devices already in the field. Section 6.</td></tr>
+      <tr><td><code>leas update:rollback --embedded</code></td><td>Emergency stop — send every device back to the bundle inside the binary.</td></tr>
+      <tr><td><code>leas dashboard</code></td><td>Open the live build and update dashboard.</td></tr>
+      <tr><td><code>leas prebuild --clean</code></td><td>Regenerate <code>ios/</code> and <code>android/</code> from scratch after changing native config.</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>The profiles, and when to reach for each</h3>
+  <div class="tw"><table>
+    <thead><tr><th>Profile</th><th>iOS</th><th>Android</th><th>Use it for</th></tr></thead>
+    <tbody>
+      <tr><td><code>development</code></td><td>Debug, development signing</td><td>APK</td><td>Running a dev client on a real device.</td></tr>
+      <tr><td><code>preview</code></td><td>Release, ad-hoc</td><td>APK</td><td>Handing a build to a colleague or a client without the stores.</td></tr>
+      <tr><td><code>production</code></td><td>Release, app-store</td><td>App bundle</td><td>Anything going to TestFlight, Play, or review.</td></tr>
+    </tbody>
+  </table></div>
+  <p class="small">Profiles inherit with <code>extends</code>, so <code>preview</code> picks up all of
+  <code>production</code>'s credential paths and overrides only the export method.</p>
+</section>
+
+<!-- ============ 4b ============ -->
+<section id="dash">
+  <div class="sec-head"><span class="sec-num">05</span><h2>The dashboard</h2></div>
+  <p>Expo gives you a web page showing every build. So does leas — except it runs on your
+  own machine, because everything leas knows already lives there.</p>
+<pre>leas dashboard            <span class="c"># http://localhost:4180</span>
+leas dashboard --port 5000 --no-open</pre>
+
+  <h3>Where the numbers come from</h3>
+  <p>Every build writes a JSON record into <code>.leas/builds/</code> the moment it is queued,
+  and updates it as it runs, succeeds, fails, and submits. That happens whether the build ran
+  on your Mac or on the fleet, so local and cloud builds sit in one history rather than two.</p>
+  <p>The dashboard watches that directory and pushes changes to the browser over server-sent
+  events, so a build shows up the instant it starts — no refreshing. Cloud builds finish on
+  someone else's machine, so leas additionally polls GitHub every fifteen seconds for runs
+  still in flight and folds the result back in. A build that completes while your laptop is
+  shut is still correct when you open it.</p>
+
+  <h3>What it shows</h3>
+  <div class="tw"><table>
+    <thead><tr><th>Panel</th><th>Answers</th></tr></thead>
+    <tbody>
+      <tr><td>Stat tiles</td><td>Total builds, success rate, median build time, how many
+      reached a store track, and what is building right now.</td></tr>
+      <tr><td>Builds per day</td><td>Fourteen days of history stacked by outcome — where the
+      bad weeks are, and whether failures cluster.</td></tr>
+      <tr><td>Platform &amp; channel</td><td>The iOS / Android split and how builds divide
+      across your profiles.</td></tr>
+      <tr><td>Build table</td><td>Every build with its commit, channel, duration, whether it
+      ran local or cloud, and its submission state. Filterable on all four.</td></tr>
+    </tbody>
+  </table></div>
+
+  <div class="note"><span class="note-l">Why local rather than hosted</span>
+  <p>A hosted dashboard needs an account, a database, and somewhere to put your build history
+  — all of which are section 12's problem, not section 5's. Reading the directory you already
+  have gives you the same view today with nothing to run and nothing to secure. When leas grows
+  real accounts, this same UI points at the API instead of the filesystem.</p></div>
+</section>
+
+<!-- ============ updates ============ -->
+<section id="updates">
+  <div class="sec-head"><span class="sec-num">06</span><h2>Over-the-air updates</h2></div>
+
+  <p>Ship a JavaScript fix to everyone already running your app, without a build, without a
+  submission, and without waiting on review. This is the feature people ask for first, because
+  it turns a two-day emergency into a two-minute one.</p>
+
+  <div class="note warn">
+    <span class="note-l">What you can and cannot send this way</span>
+    <p>An update replaces your <strong>JavaScript and assets</strong> — screens, logic, copy,
+    images, fonts. It cannot change <strong>native code</strong>. Adding a library with a native
+    module, upgrading the Expo SDK, changing permissions or app icons: all of those need a new
+    build submitted to the stores. Sending JS that calls native code the installed binary does
+    not have will crash the app on launch for every user who receives it.</p>
+  </div>
+
+  <h3>runtimeVersion is the whole safety mechanism</h3>
+  <p>Every binary you build has a <code>runtimeVersion</code> baked into it, and every update is
+  published against one. A device only accepts an update whose runtime version matches its own.
+  That single string is what stops the crash described above.</p>
+  <p>Set it in <code>app.json</code>:</p>
+<pre>"expo": {
+  "runtimeVersion": "1.4.0",              <span class="c">// or a policy:</span>
+  "runtimeVersion": { "policy": "appVersion" },
+  "updates": { "url": "https://updates.yourcompany.com/api/manifest" }
+}</pre>
+  <p><code>"appVersion"</code> is the sensible default: your runtime version follows
+  <code>expo.version</code>, so bumping the app version for a native change automatically stops
+  old updates reaching new binaries. Bump it whenever native code changes, and never otherwise.</p>
+  <div class="note"><span class="note-l">The number one confusion</span>
+  <p>"I published an update and nothing happened" is almost always a runtime version mismatch —
+  the installed app was built against a different one, so the server correctly refuses to serve
+  it. <code>leas update:list</code> shows the runtime version of every update; compare it against
+  the build that is actually on the device.</p></div>
+
+  <h3>Channels</h3>
+  <p>A channel is a named stream of updates. Devices ask for one by name, so the same app binary
+  can follow <code>preview</code> internally and <code>production</code> in the store.</p>
+<pre>leas update --channel preview --message "Try the new checkout"
+<span class="c"># looks good in testing — same bundle, no re-export</span>
+leas update:promote --from preview --to production</pre>
+  <p>Promotion is additive: the update stays available on <code>preview</code> and becomes
+  available on <code>production</code> too. Nothing is rebuilt, so what you tested is byte-for-byte
+  what ships.</p>
+
+  <h3>Publishing</h3>
+<pre>leas update --channel production --message "Fix checkout crash"</pre>
+  <p>This runs <code>expo export</code>, hashes every asset, and files the result under an id
+  derived from the export's own metadata — so republishing identical code produces an identical
+  id, exactly as EAS does. The channel then points at it, and the next device to check in gets it.</p>
+
+  <h3>Rolling back</h3>
+  <p>Faster than publishing, because nothing is rebuilt — a rollback just re-points the channel.</p>
+<pre>leas update:rollback --channel production                    <span class="c"># back one update</span>
+leas update:rollback --channel production --to &lt;updateId&gt;     <span class="c"># back to a specific one</span>
+leas update:rollback --channel production --embedded          <span class="c"># back to the binary itself</span></pre>
+  <p><code>--embedded</code> is the emergency stop. It tells devices to discard every downloaded
+  update and run the bundle compiled into the app they installed from the store. Reach for it when
+  you are not sure which update broke things — it returns everyone to a known-good state in one
+  command, and nothing is deleted, so you can point the channel back afterwards.</p>
+
+  <h3>Running the update server</h3>
+  <p>Unlike the dashboard, this one has to be reachable by phones on the internet.</p>
+<pre>leas update:serve --url https://updates.yourcompany.com</pre>
+  <p>It is a plain Node HTTP server with two endpoints — <code>/api/manifest</code> answers "is
+  there anything new for me?", and <code>/api/assets</code> serves the bundle and images. Host it
+  anywhere that runs Node. For local testing against a real device, expose your machine with a
+  tunnel and pass the tunnel's URL to <code>--url</code>; asset URLs are generated from it, so a
+  wrong value produces manifests whose assets nobody can fetch.</p>
+
+  <h3>Code signing</h3>
+  <p>Without it, anyone who can reach your update URL — or spoof it — can run arbitrary JavaScript
+  inside your app. With it, the app refuses any update not signed by your key.</p>
+<pre>leas update:keys
+npx @expo/code-signing-certificates generate-certificate \
+  --key-input-directory credentials/updates \
+  --certificate-output-directory credentials/updates</pre>
+  <p>Then point <code>expo.updates.codeSigningCertificate</code> at the generated certificate and
+  rebuild. From then on leas signs every manifest and directive it serves, and a device that
+  cannot verify the signature ignores the update rather than running it.</p>
+  <div class="note warn"><span class="note-l">Turn this on before you have users</span>
+  <p>Enabling code signing requires a new binary, because the certificate is compiled into the app.
+  Doing it on day one costs nothing; doing it after launch means waiting for everyone to update
+  through the store first.</p></div>
+
+  <h3>What a device actually does</h3>
+  <ol>
+    <li>On launch, the app asks your manifest endpoint, sending its platform, runtime version,
+    channel, and the id of the update it is currently running.</li>
+    <li>leas replies with a manifest for a newer update, or a <em>no update available</em>
+    directive, or a <em>roll back to embedded</em> directive.</li>
+    <li>Given a manifest, the app downloads each asset and verifies its hash before use.</li>
+    <li>The new version launches next time the app starts — or immediately, if you call
+    <code>Updates.reloadAsync()</code> yourself.</li>
+  </ol>
+  <p class="small">That handshake is Expo's published updates protocol, so the stock
+  <code>expo-updates</code> library talks to leas with no patches — you point
+  <code>expo.updates.url</code> at your server and nothing else changes.</p>
+</section>
+
+<!-- ============ 5 ============ -->
+<section id="identity">
+  <div class="sec-head"><span class="sec-num">07</span><h2>Where "login" actually lives</h2></div>
+
+  <p>This is the part that surprises people coming from Expo, so it is worth stating plainly.</p>
+
+  <div class="note"><span class="note-l">There is no leas login — yet</span>
+  <p>EAS has accounts because it is a hosted product serving thousands of organizations; the login
+  proves which tenant you are. leas runs on your own hardware and your own GitHub, so there is no
+  tenant to identify. <strong>Your identity is your credentials.</strong> Whoever holds the five
+  files below can ship as you. Section 12 covers what adding real accounts would take.</p></div>
+
+  <p>So "changing our login" always means one of two concrete things: rotating one of these five
+  credentials (section 8), or moving to a different Apple team or Play account (section 9). Here is
+  what each one is and what it costs you if it leaks.</p>
+
+  <div class="tw"><table>
+    <thead><tr><th>Credential</th><th>What it proves</th><th>Lifetime</th><th>If it leaks</th></tr></thead>
+    <tbody>
+      <tr><td><strong>iOS distribution certificate</strong><br><code class="mono">dist.p12</code></td>
+        <td>Builds signed with it came from your Apple team.</td>
+        <td>About a year.</td>
+        <td>Serious. Someone can sign software as you. Revoke it in the Apple developer console
+        immediately — accepting that every profile built on it dies with it.</td></tr>
+      <tr><td><strong>Provisioning profile</strong><br><code class="mono">.mobileprovision</code></td>
+        <td>That certificate may ship that specific app.</td>
+        <td>About a year, or the instant its certificate is revoked.</td>
+        <td>Minor on its own — it is useless without the private key.</td></tr>
+      <tr><td><strong>App Store Connect API key</strong><br><code class="mono">AuthKey_*.p8</code></td>
+        <td>You may act on App Store Connect with a given role.</td>
+        <td>No expiry. Lives until revoked.</td>
+        <td>Serious. Someone can upload builds and edit your store listing. Revoke and reissue.</td></tr>
+      <tr><td><strong>Android upload keystore</strong><br><code class="mono">upload.keystore</code></td>
+        <td>This bundle genuinely came from you.</td>
+        <td>As generated — 10,000 days above.</td>
+        <td>Recoverable. Request an upload key reset through Play Console support.</td></tr>
+      <tr><td><strong>Play service account</strong><br><code class="mono">*.json</code></td>
+        <td>You may publish to these Play apps.</td>
+        <td>No expiry. Lives until the key is deleted.</td>
+        <td>Serious. Delete the key in Google Cloud and revoke the account in Play Console.</td></tr>
+    </tbody>
+  </table></div>
+
+  <div class="note warn"><span class="note-l">One rule worth internalising</span>
+  <p>Every one of these is a <em>bearer</em> credential: possession is authorisation. There is no
+  password on top, no second factor, no per-person audit trail. That is precisely why a real
+  multi-tenant product needs a credential service rather than a folder — see section 12.</p></div>
+</section>
+
+<!-- ============ 6 ============ -->
+<section id="rotate">
+  <div class="sec-head"><span class="sec-num">08</span><h2>Changing your keys</h2></div>
+  <p>Five short runbooks. Each is safe to follow start to finish; where a step is irreversible it is
+  marked.</p>
+
+  <h3>Rotate the App Store Connect API key</h3>
+  <p>Do this when someone with access leaves, on a routine schedule, or after any suspected exposure.
+  It is the safest of all the rotations — no builds break.</p>
+  <ol>
+    <li>App Store Connect → <em>Users and Access → Integrations</em> → generate a <strong>new</strong>
+    key with the App Manager role. Download the <code>.p8</code>.</li>
+    <li>Update <code>ascApiKeyId</code> and <code>ascApiKeyPath</code> in <code>leas.json</code>.
+    The Issuer ID does not change.</li>
+    <li>Push the new secrets:
+<pre>base64 -i credentials/ios/AuthKey_NEWKEYID.p8 | gh secret set LEAS_ASC_API_KEY_BASE64
+gh secret set LEAS_ASC_KEY_ID</pre></li>
+    <li>Prove it works — <code>leas submit --platform ios --path .leas/build/ios/export/YourApp.ipa</code>
+    against a build you have already uploaded is a harmless test.</li>
+    <li>Only then revoke the old key.</li>
+  </ol>
+
+  <h3>Replace an expired iOS distribution certificate</h3>
+  <p>You will hit this roughly once a year, usually announced by a build failing with
+  <em>"No signing certificate found."</em></p>
+  <ol>
+    <li>Repeat setup step 3 to generate a new certificate. <strong>Do not revoke the old one yet</strong>
+    — if you have a free slot, having both alive briefly makes this a zero-downtime change.</li>
+    <li>Regenerate every provisioning profile that referenced the old certificate (next runbook).</li>
+    <li>Update <code>LEAS_IOS_DIST_CERT_BASE64</code>, <code>LEAS_IOS_DIST_CERT_PASSWORD</code>, and
+    the profile secret.</li>
+    <li>Run a full cloud build to confirm.</li>
+    <li>Revoke the old certificate.</li>
+  </ol>
+  <div class="note apple"><span class="note-l">Order matters here</span>
+  <p>Revoking first is the classic mistake. It invalidates the profiles before their replacements
+  exist, so you cannot build the thing that would prove the new certificate works.</p></div>
+
+  <h3>Regenerate a provisioning profile</h3>
+  <p>Needed whenever the certificate changes, the bundle ID changes, or a capability is added.</p>
+<pre><span class="c"># developer.apple.com → Profiles → select → Edit → pick the new cert → Generate → Download</span>
+base64 -i credentials/ios/profile.mobileprovision | gh secret set LEAS_IOS_PROVISIONING_PROFILE_BASE64</pre>
+  <p>leas reads the profile's real name, UUID, and team ID out of the file at build time, so there is
+  nothing to update in <code>leas.json</code>. Drop in the new file and build.</p>
+
+  <h3>Rotate the Play service account</h3>
+  <ol>
+    <li>Google Cloud → <em>Service Accounts</em> → open the account → <strong>Keys → Add key</strong>.
+    Adding a key does not disturb the existing one.</li>
+    <li>Save the JSON over <code>credentials/android/play-service-account.json</code> and update
+    <code>LEAS_PLAY_SERVICE_ACCOUNT_BASE64</code>.</li>
+    <li>Run a submit to the <code>internal</code> track to confirm.</li>
+    <li>Delete the old key.</li>
+  </ol>
+  <p class="small">To replace the account entirely rather than just its key, create the new one, invite
+  it in Play Console with the same permissions, verify, then revoke the old account's access.</p>
+
+  <h3>Reset a compromised Android upload key</h3>
+  <div class="note android"><span class="note-l">Only possible with Play App Signing</span>
+  <p>Generate a fresh keystore exactly as in setup step 6, then request an <strong>upload key
+  reset</strong> through Play Console support, providing the new key's certificate. Google swaps
+  which upload key it accepts. Your users are unaffected — the app signing key Google holds never
+  changes, so updates continue to install over existing installs.</p></div>
+
+  <h3>Rotate everything at once</h3>
+  <p>After a laptop is lost or someone leaves with local copies, do all five in this order:
+  Play service account key → ASC API key → upload keystore → iOS certificate → provisioning profiles.
+  Credentials that break nothing go first; the certificate, which cascades, goes last.</p>
+</section>
+
+<!-- ============ 7 ============ -->
+<section id="org">
+  <div class="sec-head"><span class="sec-num">09</span><h2>Changing your organization</h2></div>
+
+  <p>"Move the app to our new company account" sounds like an afternoon. On the leas side it is —
+  the fleet moves in minutes. On Apple's and Google's side it is a formal transfer with real
+  preconditions. Read this before you promise anyone a date.</p>
+
+  <h3>Moving to a different Apple Developer team</h3>
+  <p>Everything Apple-related is scoped to a team ID, so effectively nothing survives the move:
+  certificates, provisioning profiles, the API key, and the registered bundle identifier are all
+  team property.</p>
+  <p>Two genuinely different situations, and people conflate them constantly:</p>
+
+  <div class="tw"><table>
+    <thead><tr><th>Situation</th><th>What you actually do</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Same team, new owner</strong> — the company is unchanged, the person holding
+      the account is leaving.</td>
+      <td>Transfer the <strong>Account Holder</strong> role in the developer account. The team ID and
+      every app stay put. Nothing in leas changes. This is by far the easier path — prefer it whenever
+      it is honestly available.</td></tr>
+      <tr><td><strong>New team</strong> — a different legal entity now owns the app.</td>
+      <td>Use <strong>App Transfer</strong> in App Store Connect. The app, its reviews, ratings, and
+      TestFlight history move to the receiving team. Then rebuild all credentials from scratch under
+      the new team.</td></tr>
+    </tbody>
+  </table></div>
+
+  <h4>The App Transfer checklist</h4>
+  <p>Apple imposes real preconditions and adjusts them over time, so confirm the current list in
+  App Store Connect before committing. Perennially true:</p>
+  <ul>
+    <li>The receiving team must have accepted all current agreements and have its banking and tax
+    details complete. A transfer will sit blocked on this indefinitely.</li>
+    <li>The app must be in a transferable state — generally already released, with nothing pending
+    review.</li>
+    <li>Certain capabilities and entitlements block transfer outright. App Store Connect names the
+    specific blocker, so start the transfer early enough to discover yours.</li>
+    <li>The bundle identifier moves with the app. You do not — and cannot — re-register it.</li>
+  </ul>
+
+  <h4>What to do in leas afterwards</h4>
+  <ol>
+    <li>In the new team: create a distribution certificate (setup step 3) and a provisioning profile
+    for the transferred bundle ID (step 4).</li>
+    <li>In the new team's App Store Connect: create a new API key (step 5). Keys never transfer.</li>
+    <li>Update <code>ascApiKeyId</code>, <code>ascApiIssuerId</code>, and <code>ascAppId</code> in
+    <code>leas.json</code> — the issuer ID is different for every team, and the app ID changes too.</li>
+    <li>Replace the three iOS secrets, then run a cloud build to confirm.</li>
+    <li>Revoke the old team's credentials once a build has shipped from the new one.</li>
+  </ol>
+  <div class="note apple"><span class="note-l">Team ID is invisible in your config, but it is everywhere</span>
+  <p>leas reads the team ID out of the provisioning profile at build time rather than storing it, so
+  there is no stale value to hunt down. Swap the profile and the new team ID follows automatically.</p></div>
+
+  <h3>Moving to a different Google Play developer account</h3>
+  <p>Structurally the same story with different paperwork. Play supports transferring an app between
+  developer accounts, initiated from the source account and requiring identifying details from both
+  sides.</p>
+  <ol>
+    <li>Start the transfer from the source account's Play Console and complete Google's verification.</li>
+    <li>Once it lands, create a service account for the new organization and invite it in the new
+    Play Console (setup step 7). Service accounts never transfer.</li>
+    <li>Update <code>serviceAccountKeyPath</code> and, if the identifier changed,
+    <code>packageName</code> in <code>leas.json</code>.</li>
+    <li>Replace <code>LEAS_PLAY_SERVICE_ACCOUNT_BASE64</code>.</li>
+  </ol>
+  <div class="note android"><span class="note-l">The one thing that must not change</span>
+  <p>The package name is permanent for the life of a listing. If a transfer forces a new package
+  name, that is not a transfer — it is a new app, with no reviews, no ratings, no install base, and
+  no update path for existing users. Establish this early; it changes the whole plan.</p></div>
+
+  <h3>Moving the build fleet to a different GitHub organization</h3>
+  <p>The easy one. The fleet holds no state beyond secrets.</p>
+<pre>gh repo create NEW_ORG/your-app --private --source=. --push
+
+<span class="c"># re-upload every secret against the new repo</span>
+base64 -i credentials/ios/dist.p12 | gh secret set LEAS_IOS_DIST_CERT_BASE64 --repo NEW_ORG/your-app
+<span class="c"># ...repeat for the rest</span></pre>
+  <p>Workflows travel with the repository. Nothing in <code>leas.json</code> refers to the
+  organization, so there is nothing else to change.</p>
+  <p class="small">Running several apps? Set the secrets at <em>organization</em> level instead of
+  per-repository and every app inherits them — one rotation, not eight.</p>
+</section>
+
+<!-- ============ 8 ============ -->
+<section id="people">
+  <div class="sec-head"><span class="sec-num">10</span><h2>Adding and removing people</h2></div>
+
+  <p>The instinct is to send a teammate the credentials folder. Resist it. Every copy is a permanent
+  liability you cannot audit, and it turns a routine departure into a full five-key rotation.</p>
+
+  <h3>Add someone without handing over any keys</h3>
+  <ol>
+    <li>Give them access to the GitHub repository. They can now run
+    <code>leas build --cloud</code>, and the workflow injects the secrets at runtime — they never see
+    a credential.</li>
+    <li>Invite them to your Apple team with the <strong>Developer</strong> role, so they can build
+    and debug locally on their own device without any ability to ship.</li>
+    <li>Invite them to Play Console with view-only or track-limited permissions matching their job.</li>
+  </ol>
+  <p>Someone with only this access can do everything day-to-day work requires. Reserve the actual
+  credential files for whoever must debug the pipeline itself.</p>
+
+  <h3>Remove someone</h3>
+  <ol>
+    <li>Remove them from the GitHub repository or organization, and from your Apple and Play teams.</li>
+    <li>If they only ever held those roles, you are finished.</li>
+    <li>If they ever held a copy of the credential files, run the full rotation in section 8. There
+    is no middle position here — bearer credentials cannot be un-shared.</li>
+  </ol>
+
+  <div class="note"><span class="note-l">A useful habit</span>
+  <p>Keep a short note in your password manager recording who has ever received a credential file and
+  when. On the day someone leaves, that note is the difference between a five-minute offboarding and
+  an afternoon of guesswork.</p></div>
+</section>
+
+<!-- ============ 9 ============ -->
+<section id="broken">
+  <div class="sec-head"><span class="sec-num">11</span><h2>When it breaks</h2></div>
+  <p>The failures you will actually meet, in rough order of frequency.</p>
+
+  <div class="tw"><table>
+    <thead><tr><th>What you see</th><th>What it means</th><th>Fix</th></tr></thead>
+    <tbody>
+      <tr><td><code>No signing certificate "iOS Distribution" found</code></td>
+        <td>The certificate expired, was revoked, or belongs to a different team than the profile.</td>
+        <td>Section 8, "Replace an expired iOS distribution certificate."</td></tr>
+      <tr><td><code>Provisioning profile doesn't include signing certificate</code></td>
+        <td>The profile was generated against a certificate you have since replaced.</td>
+        <td>Regenerate the profile against the current certificate and re-upload the secret.</td></tr>
+      <tr><td>The build hangs at the codesign step and eventually times out</td>
+        <td>macOS is showing an invisible keychain permission prompt on a headless machine.</td>
+        <td>leas handles this with <code>set-key-partition-list</code>. If you see it, the build is
+        not going through leas — check for a stray custom signing script.</td></tr>
+      <tr><td><code>altool: Unable to authenticate</code></td>
+        <td>Wrong Issuer ID, or the <code>.p8</code> is not where altool expects it.</td>
+        <td>Confirm the Issuer ID matches the team that owns the key. leas installs the file into
+        <code>~/.appstoreconnect/private_keys/</code> automatically.</td></tr>
+      <tr><td><code>403 · The caller does not have permission</code></td>
+        <td>The service account exists in Google Cloud but was never granted access in Play Console —
+        or lacks access to this specific app.</td>
+        <td>Setup step 7, second half.</td></tr>
+      <tr><td><code>APK signature is invalid</code> / wrong signing key</td>
+        <td>The artifact was re-signed with a keystore Play does not recognise as your upload key.</td>
+        <td>Confirm <code>LEAS_ANDROID_KEYSTORE_BASE64</code> is the keystore actually registered with
+        this app. If it genuinely is lost, request an upload key reset.</td></tr>
+      <tr><td><code>Version code N has already been used</code></td>
+        <td>Play accepts each version code exactly once, forever.</td>
+        <td>Bump <code>android.versionCode</code> in <code>app.json</code> and rebuild. Never reuse.</td></tr>
+      <tr><td><code>SDK location not found</code></td>
+        <td><code>ANDROID_HOME</code> is unset on the machine running the build.</td>
+        <td>Set it locally; the workflow's <code>setup-android</code> step handles the cloud.</td></tr>
+      <tr><td>Published an update and nothing reaches the device</td>
+        <td>The update's runtime version does not match the installed binary's — the most common
+        update problem by a wide margin.</td>
+        <td><code>leas update:list</code> and compare against the build on the device. Section 6.</td></tr>
+      <tr><td>App crashes on launch right after an update</td>
+        <td>The JS calls native code the installed binary does not contain.</td>
+        <td><code>leas update:rollback --embedded</code> immediately, then ship it as a build
+        instead and bump the runtime version.</td></tr>
+      <tr><td>Assets 404 after an update downloads its manifest</td>
+        <td>The update server was started with the wrong <code>--url</code>, so asset URLs point
+        somewhere devices cannot reach.</td>
+        <td>Restart it with the public base URL and republish nothing — manifests are generated
+        per request.</td></tr>
+      <tr><td>Cloud build fails but works locally</td>
+        <td>Almost always a secret that is missing, stale, or was pasted with a trailing newline.</td>
+        <td><code>gh secret list</code> to check what exists, then re-upload the suspect one.</td></tr>
+    </tbody>
+  </table></div>
+
+  <div class="note"><span class="note-l">Debugging order that saves the most time</span>
+  <p>Reproduce locally first. A local build prints the full toolchain error; a cloud build prints a
+  log you have to go find and read. If it works locally and fails in the cloud, the problem is a
+  secret — not your code.</p></div>
+</section>
+
+<!-- ============ 10 ============ -->
+<section id="market">
+  <div class="sec-head"><span class="sec-num">12</span><h2>Going to market</h2></div>
+
+  <p>Everything above describes a tool that ships <em>your</em> apps. Turning it into a product other
+  companies pay for is a different job, and worth being clear-eyed about which parts are real work.</p>
+
+  <div class="note warn"><span class="note-l">The honest assessment</span>
+  <p>The build engine is the part you have already finished, and it is not the moat. The product is
+  <strong>credential custody</strong> — convincing a stranger to hand you the private key that signs
+  their company's software. Every hard problem downstream is a consequence of that one.</p></div>
+
+  <h3>What each phase actually requires</h3>
+
+  <div class="phase"><div class="phase-k">Phase 0<span>done</span></div><div>
+    <h4>Single tenant</h4>
+    <p>Credentials in your own repository secrets, fleet on your own GitHub. Ships real apps today.
+    Correct stopping point if leas only ever serves your own work.</p></div></div>
+
+  <div class="phase"><div class="phase-k">Phase 1<span>days</span></div><div>
+    <h4>Accounts and <code>leas login</code></h4>
+    <p>A small API plus device-code OAuth, so the CLI can open a browser, get a token, and store it in
+    the OS keychain. Adds <code>leas login</code>, <code>leas logout</code>, <code>leas whoami</code>.
+    Straightforward — a well-trodden pattern.</p></div></div>
+
+  <div class="phase"><div class="phase-k">Phase 2<span>weeks</span></div><div>
+    <h4>Organizations, projects, roles</h4>
+    <p>Where "change the organization" stops meaning Apple paperwork and starts meaning
+    <code>leas org:switch</code>. A project ID in <code>leas.json</code> binds a repo to an org;
+    roles decide who may ship to production versus internal tracks.</p></div></div>
+
+  <div class="phase"><div class="phase-k">Phase 3<span>the hard one</span></div><div>
+    <h4>Hosted credential custody</h4>
+    <p>Envelope encryption with a per-organization key in a KMS, decrypted only inside a build worker,
+    never written to disk unencrypted, every access logged. This is the real product: a customer
+    uploads a <code>.p12</code> once and no human at your company can read it. Get it wrong once and
+    the business is over.</p></div></div>
+
+  <div class="phase"><div class="phase-k">Phase 4<span>weeks</span></div><div>
+    <h4>Your own fleet and queue</h4>
+    <p>GitHub Actions stops being economical at volume and gives you no control over queue position.
+    Replacing it means a job queue, a Mac pool, log streaming, artifact storage, and concurrency
+    limits per plan. This is where the infrastructure bill starts.</p></div></div>
+
+  <div class="phase"><div class="phase-k">Phase 5<span>done</span></div><div>
+    <h4>Over-the-air updates</h4>
+    <p>Built — see section 6. A self-hosted implementation of Expo's updates protocol, so the stock
+    <code>expo-updates</code> client works unmodified. Independent of everything above, and usually
+    the first thing customers ask for. What is <em>not</em> built is the delivery side of it at
+    scale: a CDN in front of assets, staged rollouts to a percentage of devices, and per-update
+    adoption and crash metrics.</p></div></div>
+
+  <div class="phase"><div class="phase-k">Phase 6<span>weeks</span></div><div>
+    <h4>Metering and billing</h4>
+    <p>Build minutes, split by platform because Mac minutes cost several times Linux minutes. Meter
+    from day one even while free — retrofitting usage data onto existing accounts is miserable.</p></div></div>
+
+  <h3>What the CLI would look like</h3>
+<pre>leas login                          <span class="c"># device-code flow, token to OS keychain</span>
+leas whoami                         <span class="c"># you@company.com · acme (owner)</span>
+
+leas org:create acme
+leas org:switch acme
+leas org:members:add sam@acme.com --role developer
+
+leas project:link                   <span class="c"># writes projectId into leas.json</span>
+leas credentials:configure ios      <span class="c"># upload once, encrypted, never downloadable</span>
+leas build --platform all --auto-submit</pre>
+  <p>Note what did <em>not</em> change: the build command. Adding accounts is scaffolding around the
+  engine, never a rewrite of it — which is the payoff for keeping local and cloud as one code path.</p>
+
+  <h3>Where you can realistically win</h3>
+  <p>Expo has years of accumulated edge cases and a large fleet. Competing on general-purpose breadth
+  is a losing position. The openings are narrower and more defensible:</p>
+  <ul>
+    <li><strong>Bring your own fleet.</strong> Enterprises with Macs already on the balance sheet, and
+    a hard requirement that signing keys never leave their network.</li>
+    <li><strong>Cost at volume.</strong> Teams running hundreds of builds a month where per-minute
+    pricing has become the line item someone is asking about.</li>
+    <li><strong>Regulated environments.</strong> Buyers who need the build to happen inside a specific
+    jurisdiction or VPC, which a shared multi-tenant cloud structurally cannot offer.</li>
+  </ul>
+  <p>All three are the same insight: the customers you can win are the ones for whom
+  <em>someone else holding the key</em> is the dealbreaker — exactly the constraint your architecture
+  already answers.</p>
+</section>
+
+<!-- ============ 11 ============ -->
+<section id="ref">
+  <div class="sec-head"><span class="sec-num">13</span><h2>Reference</h2></div>
+
+  <h3>Environment variables</h3>
+  <div class="tw"><table>
+    <thead><tr><th>Variable</th><th>Holds</th><th>Needed for</th></tr></thead>
+    <tbody>
+      <tr><td><code>LEAS_IOS_DIST_CERT_BASE64</code></td><td>base64 of <code>dist.p12</code></td><td>iOS build</td></tr>
+      <tr><td><code>LEAS_IOS_DIST_CERT_PASSWORD</code></td><td>that file's password</td><td>iOS build</td></tr>
+      <tr><td><code>LEAS_IOS_PROVISIONING_PROFILE_BASE64</code></td><td>base64 of the profile</td><td>iOS build</td></tr>
+      <tr><td><code>LEAS_ASC_API_KEY_BASE64</code></td><td>base64 of the <code>.p8</code></td><td>iOS submit</td></tr>
+      <tr><td><code>LEAS_ASC_KEY_ID</code></td><td>key ID, e.g. <code>ABCD1234EF</code></td><td>iOS submit</td></tr>
+      <tr><td><code>LEAS_ASC_ISSUER_ID</code></td><td>team issuer UUID</td><td>iOS submit</td></tr>
+      <tr><td><code>LEAS_ANDROID_KEYSTORE_BASE64</code></td><td>base64 of the keystore</td><td>Android build</td></tr>
+      <tr><td><code>LEAS_ANDROID_KEYSTORE_PASSWORD</code></td><td>store password</td><td>Android build</td></tr>
+      <tr><td><code>LEAS_ANDROID_KEY_ALIAS</code></td><td>usually <code>upload</code></td><td>Android build</td></tr>
+      <tr><td><code>LEAS_ANDROID_KEY_PASSWORD</code></td><td>key password</td><td>Android build</td></tr>
+      <tr><td><code>LEAS_PLAY_SERVICE_ACCOUNT_BASE64</code></td><td>base64 of the service account JSON</td><td>Android submit</td></tr>
+    </tbody>
+  </table></div>
+  <p class="small">Every credential resolves from <em>either</em> a file path in <code>leas.json</code>
+  <em>or</em> its environment variable. That is what lets identical code run on your laptop and on a
+  CI worker.</p>
+
+  <h3>What each file does</h3>
+  <div class="tw"><table>
+    <thead><tr><th>Path</th><th>Responsibility</th></tr></thead>
+    <tbody>
+      <tr><td><code>src/cli.js</code></td><td>Command parsing and orchestration.</td></tr>
+      <tr><td><code>src/config.js</code></td><td>Reads <code>leas.json</code>, resolves profile inheritance.</td></tr>
+      <tr><td><code>src/credentials.js</code></td><td>Turns files or env vars into usable keychains and keys.</td></tr>
+      <tr><td><code>src/build-ios.js</code></td><td>Archive and export via <code>xcodebuild</code>.</td></tr>
+      <tr><td><code>src/build-android.js</code></td><td>Gradle build, then re-sign with the upload key.</td></tr>
+      <tr><td><code>src/submit-ios.js</code></td><td>Validate, upload, and poll App Store Connect.</td></tr>
+      <tr><td><code>src/submit-android.js</code></td><td>The Play Developer API edit lifecycle.</td></tr>
+      <tr><td><code>src/cloud.js</code></td><td>Dispatch to the fleet, stream logs, fetch artifacts.</td></tr>
+      <tr><td><code>.github/workflows/</code></td><td>The fleet definition — the machines themselves.</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>Two implementation details worth knowing</h3>
+  <p><strong>iOS signing never touches your login keychain.</strong> leas creates a throwaway keychain,
+  imports the certificate, marks it accessible to <code>codesign</code>, builds, and deletes the
+  keychain afterwards — even if the build fails.</p>
+  <p><strong>Android is re-signed rather than reconfigured.</strong> The Expo template signs release
+  builds with the <em>debug</em> keystore. Rather than patching your <code>build.gradle</code>, leas
+  builds normally and then re-signs the artifact with your real upload key. Idempotent, and it leaves
+  your Gradle files exactly as Expo generated them.</p>
+</section>
+
+</main>
+
+<footer>
+  <span>leas · operator's manual</span>
+  <span>v0.1.0</span>
+  <span>Apple and Google change their console flows regularly — verify exact button names against the live consoles.</span>
+</footer>
+
+</div>
