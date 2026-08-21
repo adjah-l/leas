@@ -1,0 +1,50 @@
+name: leas-android
+
+on:
+  workflow_dispatch:
+    inputs:
+      profile:
+        type: string
+        default: production
+      submit:
+        type: string
+        default: 'false'
+
+jobs:
+  build:
+    # Android needs nothing but Linux + JDK + SDK, so it runs on cheap runners.
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: 17 }
+      - uses: android-actions/setup-android@v3
+      - uses: gradle/actions/setup-gradle@v4
+
+      - run: npm ci
+
+      - name: Build
+        env:
+          LEAS_ANDROID_KEYSTORE_BASE64: ${{ secrets.LEAS_ANDROID_KEYSTORE_BASE64 }}
+          LEAS_ANDROID_KEYSTORE_PASSWORD: ${{ secrets.LEAS_ANDROID_KEYSTORE_PASSWORD }}
+          LEAS_ANDROID_KEY_ALIAS: ${{ secrets.LEAS_ANDROID_KEY_ALIAS }}
+          LEAS_ANDROID_KEY_PASSWORD: ${{ secrets.LEAS_ANDROID_KEY_PASSWORD }}
+        run: npx leas build --platform android --profile "${{ inputs.profile }}" --local
+
+      - name: Submit
+        if: inputs.submit == 'true'
+        env:
+          LEAS_PLAY_SERVICE_ACCOUNT_BASE64: ${{ secrets.LEAS_PLAY_SERVICE_ACCOUNT_BASE64 }}
+        run: npx leas submit --platform android --profile "${{ inputs.profile }}"
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: android-${{ inputs.profile }}
+          path: |
+            .leas/build/android/*.aab
+            .leas/build/android/*.apk
+          if-no-files-found: warn
