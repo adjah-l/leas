@@ -16,3 +16,6 @@ credentials.json
 site/node_modules/
 site/.next/
 site/.vercel/
+
+# TypeScript incremental build cache
+*.tsbuildinfo

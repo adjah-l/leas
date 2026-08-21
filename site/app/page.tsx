@@ -16,7 +16,7 @@ export default function Home() {
           laptop or on a fleet you rent by the minute.
         </p>
         <div className="cta">
-          <Link className="btn" href="/docs/setup">Set it up</Link>
+          <Link className="btn" href="/setup">Set it up in 10 minutes</Link>
           <Link className="btn ghost" href="/dashboard">Open the dashboard</Link>
         </div>
         <pre>

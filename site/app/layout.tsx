@@ -25,7 +25,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <div className="topbar-in">
             <Link href="/" className="brand">leas</Link>
             <nav className="topnav">
-              <Link href="/docs/setup">Get started</Link>
+              <Link href="/setup">Set up</Link>
               <Link href="/docs">Docs</Link>
               <Link href="/dashboard">Dashboard</Link>
               <Link href="/docs/updates">Updates</Link>
