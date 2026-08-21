@@ -639,8 +639,8 @@ function FilesStep({ a, gaps, onFix }: { a: Answers; gaps: Field[]; onFix: () =>
       <h3>Then run</h3>
       <p className="sub">
         {a.cloud
-          ? 'The secrets script first — it needs the credential files in place. Then a preview build, which is the cheapest way to find out whether signing works.'
-          : 'A preview build first. It is the cheapest way to find out whether signing works.'}
+          ? 'The secrets script first — it needs the credential files in place. Then leas doctor, which checks every credential, identifier, and secret in about two seconds and tells you exactly what is wrong before a build ever starts.'
+          : 'Start with leas doctor. It checks every credential and identifier in about two seconds and tells you exactly what is wrong before a build ever starts.'}
       </p>
       {a.cloud && <Code body={'chmod +x leas-secrets.sh\n./leas-secrets.sh'} name="shell" />}
       <Code body={G.nextSteps(a)} name="shell" />
@@ -648,8 +648,8 @@ function FilesStep({ a, gaps, onFix }: { a: Answers; gaps: Field[]; onFix: () =>
       <div className="note">
         <span className="note-l">If the first build fails</span>
         <p>
-          It is almost always signing, and almost always a mismatch between the bundle identifier
-          and the App ID the provisioning profile was issued for.{' '}
+          Run <code>leas doctor</code> — it catches the usual cause, which is a mismatch between
+          the bundle identifier and the App ID the provisioning profile was issued for.{' '}
           <Link href="/docs/broken">Troubleshooting</Link> walks the failures in the order they
           actually happen.
         </p>

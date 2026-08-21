@@ -399,6 +399,8 @@ leas sync`;
 export function nextSteps(a: Answers): string {
   const platform = a.platforms.length === 2 ? 'all' : a.platforms[0] ?? 'all';
   const lines = [
+    // doctor first: it finds in seconds what a build finds forty minutes in.
+    `npx leas doctor --platform ${platform}`,
     `npx leas build --platform ${platform} --profile preview`,
   ];
   lines.push(

@@ -93,7 +93,7 @@ async function play(token, method, endpoint, body) {
 }
 
 /** Service-account JWT grant (RS256) exchanged for an OAuth2 access token. */
-async function googleAccessToken(sa) {
+export async function googleAccessToken(sa) {
   const now = Math.floor(Date.now() / 1000);
   const b64 = (o) => Buffer.from(JSON.stringify(o)).toString('base64url');
   const signingInput = [

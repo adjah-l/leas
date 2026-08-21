@@ -898,6 +898,33 @@ base64 -i credentials/ios/dist.p12 | gh secret set LEAS_IOS_DIST_CERT_BASE64 --r
   <div class="sec-head"><span class="sec-num">11</span><h2>When it breaks</h2></div>
   <p>The failures you will actually meet, in rough order of frequency.</p>
 
+  <h3>Start with <code>leas doctor</code></h3>
+  <p>Most of the table below is diagnosable before a build ever starts. <code>leas doctor</code>
+  resolves every credential the way a build would, reads what is actually inside them, and calls
+  Apple and Google to confirm the keys work — in about two seconds.</p>
+  <pre><code>leas doctor                      <span class="c"># everything, including live API checks</span>
+leas doctor --offline            <span class="c"># skip the calls to Apple and Google</span>
+leas doctor --json               <span class="c"># machine-readable, for CI</span></code></pre>
+  <p>It exits non-zero when anything is broken, so it works as a gate in front of an expensive
+  cloud build. The checks worth knowing about:</p>
+  <ul>
+    <li><strong>Identifier drift.</strong> That <code>app.json</code>, <code>leas.json</code>, and the
+    provisioning profile all name the same app. This is the single most common cause of a failed
+    build, and it is invisible until <code>xcodebuild</code> refuses.</li>
+    <li><strong>Certificate and profile together.</strong> A certificate the profile does not list
+    cannot sign against it. <code>doctor</code> compares the fingerprint of the certificate inside
+    your <code>.p12</code> against the ones the profile embeds.</li>
+    <li><strong>Ad-hoc masquerading as App Store.</strong> A profile that provisions specific devices
+    is an ad-hoc profile. Exporting it with <code>app-store</code> fails late and confusingly.</li>
+    <li><strong>Expiry, early.</strong> Certificates last three years and profiles one. It warns
+    thirty days out instead of on the morning you need to ship a hotfix.</li>
+    <li><strong>The store APIs, for real.</strong> It distinguishes a rejected key (401) from a key
+    with no role granted (403), and opens and immediately abandons a Play edit — the only way to
+    prove the service account was actually granted release permission on that app.</li>
+    <li><strong>The fleet.</strong> That the workflows exist and every secret they reference is
+    present on the repository.</li>
+  </ul>
+
   <div class="tw"><table>
     <thead><tr><th>What you see</th><th>What it means</th><th>Fix</th></tr></thead>
     <tbody>

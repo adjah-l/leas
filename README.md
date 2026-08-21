@@ -55,6 +55,7 @@ a GitHub Actions run that executes `leas build --local` on `macos-15`. One code 
 | EAS Submit     | `leas submit` (ASC API + Play API v3)    | ✅ v1 |
 | EAS Workflows  | GitHub Actions workflows in `.github/`   | ✅ v1 |
 | EAS dashboard  | `leas dashboard` (local, live)           | ✅ v1 |
+| (no equivalent)| `leas doctor` — preflight every credential | ✅ v1 |
 | EAS Update     | `leas update` (self-hosted protocol v1)  | ✅ v1 |
 | EAS Hosting    | Vercel / any host                        | n/a |
 
@@ -103,10 +104,41 @@ and shipping JS that calls absent native code crashes the app for everyone who r
 
 ## Setup
 
+The fastest path is the wizard at [`/setup`](https://leas-lawrence-adjahs-projects.vercel.app/setup).
+Answer a few questions and it generates `leas.json`, your workflows, and a script that loads your
+signing material into your own repo's secrets. It runs entirely in the browser — it has no server
+half, so your keys never leave your machine.
+
+By hand:
+
 ```bash
 npm install                  # inside your RN/Expo app, or npm link this repo
 npx leas init                # writes leas.json (same shape as eas.json)
+npx leas doctor              # check everything before the first build
 ```
+
+## Preflight
+
+```bash
+leas doctor                      # everything, including live API checks
+leas doctor --offline            # skip the calls to Apple and Google
+leas doctor --json               # machine-readable, for CI
+```
+
+Signing failures are expensive because they surface forty minutes into a build. `doctor` finds them
+in about two seconds, and exits non-zero so it works as a CI gate. It checks:
+
+- **Identifiers** — that `app.json`, `leas.json`, and the provisioning profile all name the same app.
+  Drift here is the single most common cause of a failed build.
+- **Certificate and profile together** — that the profile has not expired, is not secretly an ad-hoc
+  profile, and actually lists the distribution certificate you hold. A certificate the profile does
+  not list cannot sign against it.
+- **Expiry** — distribution certificates last three years, provisioning profiles one. `doctor` warns
+  30 days out rather than on the morning you need to ship a hotfix.
+- **The store APIs, for real** — it authenticates to App Store Connect and distinguishes a bad key
+  (401) from a key with no role granted (403), and opens and immediately abandons a Play edit, which
+  is the only way to prove the service account was actually granted release permission.
+- **The fleet** — that the workflows exist and every secret they reference is set on the repo.
 
 ### Credentials
 

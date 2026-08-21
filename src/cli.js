@@ -13,6 +13,7 @@ import { createBuild, updateBuild } from './store.js';
 import { startDashboard, snapshot } from './dashboard.js';
 import { publishUpdate, rollbackUpdate, promoteUpdate, generateKeys } from './update-publish.js';
 import { startUpdateServer } from './update-server.js';
+import { doctor } from './doctor.js';
 import { listUpdates, resolveRuntimeVersion, readPointer, channelsOf } from './update-store.js';
 
 const USAGE = `
@@ -23,6 +24,7 @@ leas — self-hosted build & submit for Expo / React Native
   leas prebuild [--platform ios|android|all] [--clean]
   leas dashboard [--port 4180] [--no-open]
   leas sync      [--site https://your-site.vercel.app] [--token <t>]
+  leas doctor   [--platform ios|android|all] [--profile production] [--offline] [--json]
 
   leas update            --channel production [--message "..."] [--platform all]
   leas update:list       [--channel production] [--runtime 1.4.0]
@@ -43,6 +45,8 @@ Flags
   --channel <name>   update channel (default production)
   --message <text>   what this update changes
   --url <base>       public base URL the devices will reach the update server on
+  --offline          skip the checks that call Apple and Google
+  --json             machine-readable output
   --site <url>       your hosted leas site (or set LEAS_SITE_URL)
   --token <t>        sync token for that site (or set LEAS_SYNC_TOKEN)
 `;
@@ -68,6 +72,8 @@ const options = {
   key: { type: 'string' },
   site: { type: 'string' },
   token: { type: 'string' },
+  offline: { type: 'boolean', default: false },
+  json: { type: 'boolean', default: false },
   help: { type: 'boolean', short: 'h', default: false },
 };
 
@@ -100,6 +106,7 @@ async function main() {
     });
     case 'update:keys': return generateKeys({ projectRoot });
     case 'sync': return cmdSync();
+    case 'doctor': return cmdDoctor();
     case 'init': return cmdInit();
     default: throw new LeasError(`Unknown command "${command}".\n${USAGE}`);
   }
@@ -316,6 +323,15 @@ async function cmdSync() {
   }
   log.ok(`Synced. ${site}/dashboard is now showing this history.`);
   return JSON.parse(text);
+}
+
+async function cmdDoctor() {
+  const { healthy } = await doctor({
+    projectRoot, platforms: platforms(), profileName: flags.profile,
+    offline: flags.offline, json: flags.json,
+  });
+  // A non-zero exit makes this usable as a CI gate, not just a human report.
+  if (!healthy) process.exit(1);
 }
 
 function cmdInit() {
