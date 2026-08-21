@@ -8,6 +8,37 @@ leas build --platform all --profile production --auto-submit          # local
 leas build --platform all --profile production --auto-submit --cloud  # rented Macs + Linux
 ```
 
+## Where it lives
+
+| | |
+| --- | --- |
+| Site &amp; docs | https://leas-lawrence-adjahs-projects.vercel.app |
+| Repo | https://github.com/adjah-l/leas (private) |
+| Vercel project | `leas` — root directory `site/`, production branch `main` |
+
+Push to `main` and the site redeploys. The full operator's manual lives at `/docs`, and the
+hosted dashboard at `/dashboard`.
+
+### Making the hosted dashboard show your real builds
+
+The site ships with sample data so it is useful the moment it deploys. To replace it with your
+own history:
+
+1. Create a Blob store on the Vercel project (Storage → Create → Blob). Vercel sets
+   `BLOB_READ_WRITE_TOKEN` for you.
+2. Add an environment variable `LEAS_SYNC_TOKEN` — any long random string:
+   `openssl rand -hex 24`
+3. Redeploy, then push from your project:
+
+```bash
+export LEAS_SITE_URL=https://leas-lawrence-adjahs-projects.vercel.app
+export LEAS_SYNC_TOKEN=the-same-string
+leas sync
+```
+
+`leas sync` posts the same snapshot the local dashboard renders. Without those two variables the
+site keeps serving sample data and says so on the page, rather than pretending to be live.
+
 ## Why this is buildable
 
 Expo's EAS is, underneath, three things: a **build engine** (prebuild → xcodebuild / gradle → signed
