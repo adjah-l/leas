@@ -1,10 +1,12 @@
-import { existsSync, readFileSync, mkdtempSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import { capture, log, LeasError } from './util.js';
 import { loadConfig, buildProfile, submitProfile, readAppJson } from './config.js';
-import { materialize } from './credentials.js';
+import {
+  readDistributionCertificate, readProvisioningProfile, readAndroidKeystore,
+  resolveCredential, expiryStatus, NeedsPassword,
+} from './credential-scan.js';
 import { ascToken } from './submit-ios.js';
 import { googleAccessToken } from './submit-android.js';
 
@@ -155,26 +157,14 @@ async function checkIos(r, { projectRoot, config, profileName, offline }) {
   // --- distribution certificate ---
   let certFingerprint = null;
   await r.probe(G, 'Distribution certificate', async () => {
-    const p12 = resolve(projectRoot, build.distributionCertificatePath, 'LEAS_IOS_DIST_CERT_BASE64', 'dist.p12');
-    const password = build.distributionCertificatePassword ?? process.env.LEAS_IOS_DIST_CERT_PASSWORD ?? '';
-    let pem;
-    try {
-      pem = await capture('openssl', ['pkcs12', '-in', p12, '-clcerts', '-nokeys', '-passin', `pass:${password}`]);
-    } catch {
-      // OpenSSL 3 refuses the older ciphers Keychain still exports with.
-      pem = await capture('openssl', ['pkcs12', '-in', p12, '-clcerts', '-nokeys', '-legacy', '-passin', `pass:${password}`]);
-    }
-    const cert = new crypto.X509Certificate(pem);
-    certFingerprint = cert.fingerprint.replace(/:/g, '').toUpperCase();
-    const cn = /CN=([^,\n]+)/.exec(cert.subject)?.[1]?.trim() ?? cert.subject;
-    return expiry(`${cn}`, new Date(cert.validTo));
+    const cert = await readDistributionCertificate({ projectRoot, build });
+    certFingerprint = cert.fingerprint;
+    return expiry(cert.identity, cert.expires);
   }, 'Export the Apple Distribution certificate from Keychain Access as a .p12, or set LEAS_IOS_DIST_CERT_PASSWORD.');
 
   // --- provisioning profile ---
   await r.probe(G, 'Provisioning profile', async () => {
-    const file = resolve(projectRoot, build.provisioningProfilePath, 'LEAS_IOS_PROVISIONING_PROFILE_BASE64', 'profile.mobileprovision');
-    const plist = await capture('security', ['cms', '-D', '-i', file]);
-    const p = parseProfile(plist);
+    const p = await readProvisioningProfile({ projectRoot, build });
 
     // The profile is the source of truth for what this build is allowed to be.
     const appId = p.applicationIdentifier?.replace(/^[A-Z0-9]+\./, '');
@@ -216,7 +206,7 @@ async function checkIos(r, { projectRoot, config, profileName, offline }) {
     if (!keyId || !issuerId) {
       return { status: 'fail', detail: 'ascApiKeyId or ascApiIssuerId is not set', fix: 'Fill both in leas.json, or set LEAS_ASC_KEY_ID and LEAS_ASC_ISSUER_ID.' };
     }
-    const p8 = resolve(projectRoot, submit.ascApiKeyPath, 'LEAS_ASC_API_KEY_BASE64', `AuthKey_${keyId}.p8`);
+    const p8 = resolveCredential(projectRoot, submit.ascApiKeyPath, 'LEAS_ASC_API_KEY_BASE64', `AuthKey_${keyId}.p8`);
     privateKey = readFileSync(p8, 'utf8');
     crypto.createPrivateKey(privateKey); // throws if it is not a usable EC key
     return `${keyId} · issuer ${issuerId.slice(0, 8)}…`;
@@ -278,19 +268,19 @@ async function checkAndroid(r, { projectRoot, config, profileName, offline }) {
   else r.ok(G, 'Android SDK', sdk);
 
   await r.probe(G, 'Upload keystore', async () => {
-    const file = resolve(projectRoot, build.keystorePath, 'LEAS_ANDROID_KEYSTORE_BASE64', 'upload.keystore');
-    const password = build.keystorePassword ?? process.env.LEAS_ANDROID_KEYSTORE_PASSWORD;
-    const alias = build.keyAlias ?? process.env.LEAS_ANDROID_KEY_ALIAS;
-    if (!password) {
-      return { status: 'warn', detail: 'present, but no password available to inspect it', fix: 'Set LEAS_ANDROID_KEYSTORE_PASSWORD to verify the alias and expiry.' };
+    let k;
+    try {
+      k = await readAndroidKeystore({ projectRoot, build });
+    } catch (e) {
+      if (e instanceof NeedsPassword) {
+        return { status: 'warn', detail: 'present, but no password available to inspect it', fix: 'Set LEAS_ANDROID_KEYSTORE_PASSWORD to verify the alias and expiry.' };
+      }
+      throw e;
     }
-    const out = await capture('keytool', ['-list', '-v', '-keystore', file, '-storepass', password]);
-    const aliases = [...out.matchAll(/Alias name: (.+)/g)].map((m) => m[1].trim());
-    if (alias && !aliases.includes(alias)) {
-      return { status: 'fail', detail: `no alias "${alias}" — keystore holds ${aliases.join(', ') || 'nothing'}`, fix: 'Set keyAlias in leas.json to one of the aliases above.' };
+    if (k.wanted && !k.aliases.includes(k.wanted)) {
+      return { status: 'fail', detail: `no alias "${k.wanted}" — keystore holds ${k.aliases.join(', ') || 'nothing'}`, fix: 'Set keyAlias in leas.json to one of the aliases above.' };
     }
-    const until = /until: (.+)/.exec(out)?.[1];
-    return expiry(`alias ${alias ?? aliases[0]}`, until ? new Date(until) : null);
+    return expiry(`alias ${k.alias}`, k.expires);
   }, 'Generate one with: keytool -genkeypair -v -keystore <path> -alias upload -keyalg RSA -keysize 2048 -validity 10000');
 
   if (!submit) return r.skip(G, 'Google Play', `no submit.${profileName}.android block — build only`);
@@ -392,36 +382,13 @@ async function gitRepo(projectRoot) {
 
 /* --------------------------------- helpers -------------------------------- */
 
-/** Resolve a credential the same way a build will — file first, then env. */
-function resolve(projectRoot, filePath, base64Env, name) {
-  const abs = filePath ? path.resolve(projectRoot, filePath) : null;
-  return materialize({ filePath: abs, base64Env, name });
-}
-
 /** Certificates and profiles expire on the morning you need to ship a hotfix. */
 function expiry(label, date) {
-  if (!date || Number.isNaN(date.getTime())) return { status: 'ok', detail: label };
-  const days = Math.floor((date.getTime() - Date.now()) / 86_400_000);
+  const { status, daysLeft } = expiryStatus(date);
+  if (status === 'unknown') return { status: 'ok', detail: label };
   const on = date.toISOString().slice(0, 10);
-  if (days < 0) return { status: 'fail', detail: `${label} — expired ${on}`, fix: 'Renew it before the next build.' };
-  if (days < 30) return { status: 'warn', detail: `${label} — expires ${on}, in ${days} day${days === 1 ? '' : 's'}` };
+  if (status === 'expired') return { status: 'fail', detail: `${label} — expired ${on}`, fix: 'Renew it before the next build.' };
+  if (status === 'expiring') return { status: 'warn', detail: `${label} — expires ${on}, in ${daysLeft} day${daysLeft === 1 ? '' : 's'}` };
   return { status: 'ok', detail: `${label} — valid until ${on}` };
 }
 
-/** The decoded .mobileprovision plist, read for the handful of keys that matter. */
-function parseProfile(xml) {
-  const str = (key) => new RegExp(`<key>${key}</key>\\s*<string>([^<]*)</string>`).exec(xml)?.[1] ?? null;
-  const certBlock = /<key>DeveloperCertificates<\/key>\s*<array>([\s\S]*?)<\/array>/.exec(xml)?.[1] ?? '';
-  const certFingerprints = [...certBlock.matchAll(/<data>([\s\S]*?)<\/data>/g)].map((m) => {
-    const der = Buffer.from(m[1].replace(/\s/g, ''), 'base64');
-    return new crypto.X509Certificate(der).fingerprint.replace(/:/g, '').toUpperCase();
-  });
-  return {
-    name: str('Name'),
-    uuid: str('UUID'),
-    applicationIdentifier: str('application-identifier'),
-    expires: new Date(/<key>ExpirationDate<\/key>\s*<date>([^<]*)<\/date>/.exec(xml)?.[1] ?? NaN),
-    hasDevices: /<key>ProvisionedDevices<\/key>/.test(xml),
-    certFingerprints,
-  };
-}

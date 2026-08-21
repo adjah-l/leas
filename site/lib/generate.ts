@@ -6,6 +6,8 @@
  * generation deliberately has no server half to drift away from.
  */
 
+import { templates } from './templates';
+
 export type Platform = 'ios' | 'android';
 
 export type Answers = {
@@ -30,6 +32,8 @@ export type Answers = {
   track: string;
   // Dashboard
   syncUrl: string;
+  // The expiry watch
+  watchCredentials: boolean;
 };
 
 export const DEFAULT_ANSWERS: Answers = {
@@ -51,6 +55,7 @@ export const DEFAULT_ANSWERS: Answers = {
   serviceAccountPath: 'credentials/android/play-service-account.json',
   track: 'internal',
   syncUrl: '',
+  watchCredentials: true,
 };
 
 export const has = (a: Answers, p: Platform) => a.platforms.includes(p);
@@ -294,6 +299,17 @@ ${submitStep}
 `;
 }
 
+/* ---------------------------- the expiry watch ----------------------------- */
+
+/**
+ * Certificates and profiles expire silently. This is the one workflow that runs
+ * on a schedule rather than on demand, so the reminder arrives before the
+ * outage rather than as the outage.
+ */
+export function credentialsWorkflow(a: Answers): string {
+  return templates['leas-credentials'].replace('node-version: 22', `node-version: ${or(a.nodeVersion, '22')}`);
+}
+
 /* ------------------------------ secrets script ----------------------------- */
 
 export function secretsScript(a: Answers): string {
@@ -401,6 +417,7 @@ export function nextSteps(a: Answers): string {
   const lines = [
     // doctor first: it finds in seconds what a build finds forty minutes in.
     `npx leas doctor --platform ${platform}`,
+    `npx leas creds --platform ${platform}`,
     `npx leas build --platform ${platform} --profile preview`,
   ];
   lines.push(
@@ -435,6 +452,13 @@ export function files(a: Answers): GeneratedFile[] {
       name: '.github/workflows/leas-android.yml',
       body: androidWorkflow(a),
       note: 'Ubuntu runner — cheap, no Apple constraint.',
+    });
+  }
+  if (a.cloud && a.watchCredentials) {
+    out.push({
+      name: '.github/workflows/leas-credentials.yml',
+      body: credentialsWorkflow(a),
+      note: 'Weekly. Opens an issue before a certificate expires, and closes it when you renew.',
     });
   }
   if (a.cloud) {

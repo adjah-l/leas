@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useMemo, useState } from 'react';
+import Credentials from './Credentials';
 import type { Snapshot } from '@/lib/types';
 import { dur, ago } from '@/lib/format';
 import BuildsChart from './BuildsChart';
@@ -129,6 +130,8 @@ export default function Dashboard({ initial }: { initial: Loaded }) {
           </div>
         )}
       </div>
+
+      <Credentials items={data.credentials ?? []} />
 
       <div className="filters">
         {groups.map((g) => (

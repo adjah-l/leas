@@ -710,6 +710,26 @@ npx @expo/code-signing-certificates generate-certificate \
   <p>Five short runbooks. Each is safe to follow start to finish; where a step is irreversible it is
   marked.</p>
 
+  <h3>Knowing when</h3>
+  <p>Distribution certificates last three years and provisioning profiles last one. That is long
+  enough that nobody remembers and short enough that everybody is eventually caught — usually on the
+  morning a hotfix needs to ship. <code>leas creds</code> reads the dates back out of the files
+  themselves, so there is nothing to keep in sync by hand.</p>
+  <pre><code>leas creds                       <span class="c"># what expires, soonest first</span>
+leas creds --days 60             <span class="c"># widen the warning window</span>
+leas creds --check               <span class="c"># exit non-zero if anything is inside it</span></code></pre>
+  <p>The scheduled version is the one that matters. The setup wizard can emit a
+  <code>leas-credentials.yml</code> workflow that runs weekly on a cheap Linux runner, reads the
+  expiry dates out of the same repository secrets your builds use, and opens an issue thirty days
+  before anything lapses — then closes that issue once you have renewed.</p>
+  <div class="note">
+    <span class="note-l">Why this is safe to host</span>
+    <p>A credential record is metadata: a name, a date, and a public certificate fingerprint. No key
+    material and no password is ever read out or sent anywhere. That is what makes it something a
+    dashboard is allowed to hold at all — and it is the reason <code>leas sync</code> can show your
+    expiry dates on a web page without becoming a custodian of your signing identity.</p>
+  </div>
+
   <h3>Rotate the App Store Connect API key</h3>
   <p>Do this when someone with access leaves, on a routine schedule, or after any suspected exposure.
   It is the safest of all the rotations — no builds break.</p>

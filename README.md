@@ -56,8 +56,31 @@ a GitHub Actions run that executes `leas build --local` on `macos-15`. One code 
 | EAS Workflows  | GitHub Actions workflows in `.github/`   | ✅ v1 |
 | EAS dashboard  | `leas dashboard` (local, live)           | ✅ v1 |
 | (no equivalent)| `leas doctor` — preflight every credential | ✅ v1 |
+| (no equivalent)| `leas creds` — expiry watch, scheduled | ✅ v1 |
 | EAS Update     | `leas update` (self-hosted protocol v1)  | ✅ v1 |
 | EAS Hosting    | Vercel / any host                        | n/a |
+
+## Credential expiry
+
+Distribution certificates last three years and provisioning profiles last one — long enough that
+nobody remembers, short enough that everybody is eventually caught. `leas creds` reads the dates
+back out of the files themselves, soonest first:
+
+```bash
+leas creds                 # what expires, and when
+leas creds --days 60       # widen the warning window
+leas creds --check         # exit non-zero if anything falls inside it
+```
+
+The scheduled version is the one that matters. `templates/leas-credentials.yml` runs weekly on a
+Linux runner, reads the expiry dates out of the same repository secrets your builds already use,
+and opens an issue thirty days before anything lapses — then closes it once you have renewed. The
+setup wizard emits it for you.
+
+**A credential record is metadata only** — a name, a date, and a public certificate fingerprint.
+No key material and no password is ever read out or transmitted. That is what makes expiry
+something a dashboard can hold without becoming a custodian of your signing identity, and it is
+why `leas sync` can put these dates on a web page at all.
 
 ## The dashboard
 

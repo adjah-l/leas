@@ -397,9 +397,10 @@ function AppleStep({
       <div className="note apple">
         <span className="note-l">Expiry</span>
         <p>
-          Distribution certificates last three years and provisioning profiles last one. Both
-          expire on the morning you need to ship a hotfix. Put the profile&rsquo;s expiry date in
-          your calendar now, while you are looking at it.
+          Distribution certificates last three years and provisioning profiles last one — long
+          enough to forget, short enough to be caught. <code>leas creds</code> reads both dates
+          back out of the files, and the scheduled watch on the next step opens an issue before
+          either one lapses.
         </p>
       </div>
     </section>
@@ -564,6 +565,25 @@ function FleetStep({ a, set, errs }: { a: Answers; set: SetFn; errs: Partial<Rec
             placeholder="22"
             hint="Match what you develop against."
           />
+        )}
+
+        {a.cloud && (
+          <div className="fld wide">
+            <span className="l">Watch for expiring credentials</span>
+            <div className="chips">
+              <button type="button" className="chip" aria-pressed={a.watchCredentials} onClick={() => set('watchCredentials', true)}>
+                Yes — check weekly
+              </button>
+              <button type="button" className="chip" aria-pressed={!a.watchCredentials} onClick={() => set('watchCredentials', false)}>
+                No
+              </button>
+            </div>
+            <span className="hint">
+              Adds a scheduled workflow that reads the expiry dates out of your own secrets and
+              opens an issue 30 days before a certificate or profile lapses — then closes it once
+              you have renewed.
+            </span>
+          </div>
         )}
       </div>
 

@@ -142,6 +142,40 @@ export const demoSnapshot: Snapshot = {
       }
     ]
   },
+  "credentials": [
+    {
+      "id": "ios-provisioning-profile",
+      "platform": "ios",
+      "kind": "Provisioning profile",
+      "profile": "production",
+      "identity": "Acme Mobile App Store",
+      "expires": "2026-09-09T00:00:00Z",
+      "daysLeft": 19,
+      "status": "expiring",
+      "appId": "com.acme.mobile"
+    },
+    {
+      "id": "ios-distribution-certificate",
+      "platform": "ios",
+      "kind": "Distribution certificate",
+      "profile": "production",
+      "identity": "Apple Distribution: Acme Inc (7Q4XK2M9RB)",
+      "expires": "2027-10-07T00:00:00Z",
+      "daysLeft": 412,
+      "status": "ok",
+      "fingerprint": "9F2C1A77B0D34E58"
+    },
+    {
+      "id": "android-upload-keystore",
+      "platform": "android",
+      "kind": "Upload keystore",
+      "profile": "production",
+      "identity": "alias upload",
+      "expires": "2051-12-11T00:00:00Z",
+      "daysLeft": 9243,
+      "status": "ok"
+    }
+  ],
   "builds": [
     {
       "id": "bld_live_and01",

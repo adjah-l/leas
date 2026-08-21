@@ -437,3 +437,29 @@ td.num{font-family:"IBM Plex Mono",monospace;font-variant-numeric:tabular-nums;w
 .wiznav .btn{cursor:pointer;font-family:inherit}
 .wiznav .btn:disabled{opacity:.35;cursor:not-allowed}
 .wiznav .btn:last-child{margin-left:auto}
+
+/* ---- credential expiry watch ---- */
+.panel.creds{margin-bottom:22px;padding-bottom:0}
+.cred-row{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:14px;align-items:center;
+  padding:11px 0;border-top:1px solid var(--line)}
+.cred-row:first-of-type{border-top:0}
+.cred-pill{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:500;
+  font-family:"IBM Plex Mono",monospace;padding:3px 9px;border-radius:20px;
+  background:var(--surface-2);color:var(--muted);white-space:nowrap}
+.cred-pill i{width:7px;height:7px;border-radius:50%;background:var(--st-idle);flex:none}
+.cred-pill.ok{background:var(--accent-soft);color:var(--accent-2)}
+.cred-pill.ok i{background:var(--st-good)}
+.cred-pill.expiring{background:var(--signal-soft);color:var(--st-warn-ink)}
+.cred-pill.expiring i{background:var(--st-warn);animation:pulse 1.8s ease-in-out infinite}
+.cred-pill.expired{background:var(--signal-soft);color:var(--st-crit)}
+.cred-pill.expired i{background:var(--st-crit)}
+.cred-kind{font-size:14px;color:var(--ink);display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.cred-kind .plat{font-size:11.5px;color:var(--muted);font-family:"IBM Plex Mono",monospace}
+.cred-note{color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:46ch}
+.cred-count{color:var(--st-warn-ink)}
+.cred-row.expired .cred-count{color:var(--st-crit)}
+.cred-foot{border-top:1px solid var(--line);margin-top:4px;padding:12px 0 14px;
+  font-size:12.5px;color:var(--muted)}
+.cred-foot b{color:var(--ink-2);font-weight:600}
+.cred-foot code{background:var(--surface-2);border:1px solid var(--line);padding:1px 6px;
+  border-radius:3px;font-size:12px;font-family:"IBM Plex Mono",monospace}
