@@ -12,12 +12,20 @@ leas build --platform all --profile production --auto-submit --cloud  # rented M
 
 | | |
 | --- | --- |
-| Site &amp; docs | https://leas-lawrence-adjahs-projects.vercel.app |
+| Site &amp; docs | the commercial site — see `LEAS_CANONICAL_SITE` below |
+| This app | https://leas-lawrence-adjahs-projects.vercel.app — dashboard |
 | Repo | https://github.com/adjah-l/leas (private) |
 | Vercel project | `leas` — root directory `site/`, production branch `main` |
 
-Push to `main` and the site redeploys. The full operator's manual lives at `/docs`, and the
-hosted dashboard at `/dashboard`.
+Push to `main` and the site redeploys.
+
+**The manual and the setup wizard now live on the commercial site.** Keeping a second copy here
+would split search authority between two identical corpora, so setting **`LEAS_CANONICAL_SITE`**
+on this Vercel project (to the marketing origin, no trailing slash) makes `/`, `/setup`, `/docs`,
+and `/docs/*` permanently redirect there. Unset, nothing redirects and this app serves them as
+before — so the switch is a single environment variable, flipped when the domain is live.
+
+`/dashboard` stays here either way. It is the app surface, not a marketing page.
 
 ### Making the hosted dashboard show your real builds
 
