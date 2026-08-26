@@ -63,6 +63,18 @@ export const has = (a: Answers, p: Platform) => a.platforms.includes(p);
 /** Unanswered fields become loud placeholders rather than silently-wrong values. */
 const or = (v: string, fallback: string) => (v.trim() ? v.trim() : fallback);
 
+/**
+ * Single-quote a value for a shell command.
+ *
+ * Everything here is generated from what someone typed into a form, and an app
+ * name with a space or an apostrophe in it would otherwise produce a command
+ * that silently does the wrong thing when they paste it.
+ */
+const sh = (v: string) => `'${String(v).replace(/'/g, `'\\''`)}'`;
+
+/** Quote a value for a YAML scalar. */
+const yml = (v: string) => `"${String(v).replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`;
+
 export const ascKeyPath = (a: Answers) =>
   `credentials/ios/AuthKey_${or(a.ascKeyId, 'XXXXXXXXXX')}.p8`;
 
@@ -213,10 +225,10 @@ jobs:
     runs-on: macos-15
     timeout-minutes: 90
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with: { node-version: ${a.nodeVersion}, cache: npm }
-      - uses: maxim-lobanov/setup-xcode@v1
+      - uses: maxim-lobanov/setup-xcode@ed7a3b1fda3918c0306d1b724322adc0b8cc0a90 # v1
         with: { xcode-version: latest-stable }
 
       - run: npm ci
@@ -228,7 +240,7 @@ jobs:
           LEAS_IOS_PROVISIONING_PROFILE_BASE64: \${{ secrets.LEAS_IOS_PROVISIONING_PROFILE_BASE64 }}
         run: npx leas build --platform ios --profile "\${{ inputs.profile }}" --local
 ${submitStep}
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: always()
         with:
           name: ios-\${{ inputs.profile }}
@@ -270,13 +282,13 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with: { node-version: ${a.nodeVersion}, cache: npm }
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4
         with: { distribution: temurin, java-version: 17 }
-      - uses: android-actions/setup-android@v3
-      - uses: gradle/actions/setup-gradle@v4
+      - uses: android-actions/setup-android@9fc6c4e9069bf8d3d10b2204b1fb8f6ef7065407 # v3
+      - uses: gradle/actions/setup-gradle@48b5f213c81028ace310571dc5ec0fbbca0b2947 # v4
 
       - run: npm ci
 
@@ -288,7 +300,7 @@ jobs:
           LEAS_ANDROID_KEY_PASSWORD: \${{ secrets.LEAS_ANDROID_KEY_PASSWORD }}
         run: npx leas build --platform android --profile "\${{ inputs.profile }}" --local
 ${submitStep}
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: always()
         with:
           name: android-\${{ inputs.profile }}
@@ -405,11 +417,18 @@ export function p12Command(a: Answers): string {
 }
 
 export function syncSnippet(a: Answers): string {
-  return `# Point the CLI at your hosted dashboard, then push a snapshot.
-export LEAS_SITE_URL=${or(a.syncUrl, 'https://your-leas-site.vercel.app')}
-export LEAS_SYNC_TOKEN=$(openssl rand -hex 24)   # set the same value on the site
+  // This used to say `openssl rand -hex 24` and "set the same value on the
+  // site". There is no such setting: the service only accepts tokens it minted
+  // itself and stores as SHA-256 hashes, so a token invented here could never
+  // authenticate. These are the steps that actually work.
+  return `# 1. Sign in at ${or(a.syncUrl, 'https://leas.dev')}/account
+# 2. Create a sync token. It is shown once — copy it then.
+# 3. Point the CLI at your account and push a snapshot:
 
-leas sync`;
+export LEAS_SITE_URL=${sh(or(a.syncUrl, 'https://leas.dev'))}
+export LEAS_SYNC_TOKEN=leas_paste_the_token_you_copied
+
+npx leas sync`;
 }
 
 export function nextSteps(a: Answers): string {
