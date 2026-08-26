@@ -1,7 +1,12 @@
 # leas
 
-Self-hosted EAS. Build and auto-submit Expo / React Native apps to the App Store and Google Play —
-on your own machine or on your own cloud fleet, with one command and one config file.
+The open-source, self-hosted alternative to Expo Application Services (EAS). Build, sign,
+auto-submit, and update Expo / React Native apps on your own machine or cloud fleet, with one
+command and one config file.
+
+[Website](https://leas.dev) · [Documentation](https://leas.dev/docs) ·
+[EAS comparison](https://leas.dev/eas-alternative) ·
+[npm package](https://www.npmjs.com/package/leas-cli)
 
 ```
 leas build --platform all --profile production --auto-submit          # local
@@ -12,9 +17,9 @@ leas build --platform all --profile production --auto-submit --cloud  # rented M
 
 | | |
 | --- | --- |
-| Site &amp; docs | the commercial site — see `LEAS_CANONICAL_SITE` below |
+| Site &amp; docs | https://leas.dev |
 | This app | https://leas-lawrence-adjahs-projects.vercel.app — dashboard |
-| Repo | https://github.com/adjah-l/leas (private) |
+| Repo | https://github.com/adjah-l/leas |
 | Vercel project | `leas` — root directory `site/`, production branch `main` |
 
 Push to `main` and the site redeploys.
@@ -135,7 +140,7 @@ and shipping JS that calls absent native code crashes the app for everyone who r
 
 ## Setup
 
-The fastest path is the wizard at [`/setup`](https://leas-lawrence-adjahs-projects.vercel.app/setup).
+The fastest path is the wizard at [`leas.dev/setup`](https://leas.dev/setup).
 Answer a few questions and it generates `leas.json`, your workflows, and a script that loads your
 signing material into your own repo's secrets. It runs entirely in the browser — it has no server
 half, so your keys never leave your machine.
