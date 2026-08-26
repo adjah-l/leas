@@ -1,10 +1,47 @@
 {
-  "name": "leas",
-  "version": "0.1.0",
+  "name": "leas-cli",
+  "version": "1.0.0",
   "description": "Self-hosted EAS: build and auto-submit Expo / React Native apps to iOS and Android, locally or in the cloud.",
+  "keywords": [
+    "expo",
+    "react-native",
+    "eas",
+    "eas-build",
+    "eas-submit",
+    "eas-update",
+    "ios",
+    "android",
+    "app-store",
+    "google-play",
+    "code-signing",
+    "over-the-air",
+    "ota",
+    "self-hosted",
+    "ci"
+  ],
+  "homepage": "https://leas.dev",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/adjah-l/leas.git"
+  },
+  "bugs": {
+    "url": "https://github.com/adjah-l/leas/issues"
+  },
+  "author": "Lawrence Adjah",
+  "license": "MIT",
   "type": "module",
-  "bin": { "leas": "./src/cli.js" },
-  "engines": { "node": ">=20" },
-  "scripts": { "leas": "node src/cli.js" },
-  "license": "MIT"
+  "bin": {
+    "leas": "src/cli.js"
+  },
+  "files": [
+    "src",
+    "templates",
+    "leas.example.json"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "leas": "node src/cli.js"
+  }
 }

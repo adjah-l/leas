@@ -367,7 +367,7 @@ function cmdInit() {
   if (existsSync(file)) throw new LeasError('leas.json already exists.');
   const app = readAppJson(projectRoot);
   writeFileSync(file, JSON.stringify({
-    cli: { version: '>=0.1.0' },
+    cli: { version: '>=1.0.0' },
     build: {
       development: { developmentClient: true, ios: { exportMethod: 'development' }, android: { buildType: 'apk' } },
       preview: { extends: 'production', ios: { exportMethod: 'ad-hoc' }, android: { buildType: 'apk' } },

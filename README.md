@@ -143,9 +143,9 @@ half, so your keys never leave your machine.
 By hand:
 
 ```bash
-npm install                  # inside your RN/Expo app, or npm link this repo
-npx leas init                # writes leas.json (same shape as eas.json)
-npx leas doctor              # check everything before the first build
+npm install --save-dev leas-cli   # inside your RN/Expo app
+npx leas init                     # writes leas.json (same shape as eas.json)
+npx leas doctor                   # check everything before the first build
 ```
 
 ## Preflight
