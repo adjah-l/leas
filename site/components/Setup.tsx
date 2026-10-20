@@ -397,7 +397,7 @@ function AppleStep({
       <div className="note apple">
         <span className="note-l">Expiry</span>
         <p>
-          Distribution certificates last three years and provisioning profiles last one — long
+          Apple distribution certificates and provisioning profiles both last about one year: long
           enough to forget, short enough to be caught. <code>leas creds</code> reads both dates
           back out of the files, and the scheduled watch on the next step opens an issue before
           either one lapses.

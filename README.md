@@ -75,7 +75,7 @@ a GitHub Actions run that executes `leas build --local` on `macos-15`. One code 
 
 ## Credential expiry
 
-Distribution certificates last three years and provisioning profiles last one — long enough that
+Apple distribution certificates and provisioning profiles both last about one year: long enough that
 nobody remembers, short enough that everybody is eventually caught. `leas creds` reads the dates
 back out of the files themselves, soonest first:
 
@@ -169,7 +169,7 @@ in about two seconds, and exits non-zero so it works as a CI gate. It checks:
 - **Certificate and profile together** — that the profile has not expired, is not secretly an ad-hoc
   profile, and actually lists the distribution certificate you hold. A certificate the profile does
   not list cannot sign against it.
-- **Expiry** — distribution certificates last three years, provisioning profiles one. `doctor` warns
+- **Expiry**: Apple distribution certificates and provisioning profiles both last about one year. `doctor` warns
   30 days out rather than on the morning you need to ship a hotfix.
 - **The store APIs, for real** — it authenticates to App Store Connect and distinguishes a bad key
   (401) from a key with no role granted (403), and opens and immediately abandons a Play edit, which

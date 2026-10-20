@@ -710,7 +710,7 @@ npx @expo/code-signing-certificates generate-certificate \
   marked.</p>
 
   <h3>Knowing when</h3>
-  <p>Distribution certificates last three years and provisioning profiles last one. That is long
+  <p>Apple distribution certificates and provisioning profiles both last about one year. That is long
   enough that nobody remembers and short enough that everybody is eventually caught — usually on the
   morning a hotfix needs to ship. <code>leas creds</code> reads the dates back out of the files
   themselves, so there is nothing to keep in sync by hand.</p>
@@ -935,7 +935,7 @@ leas doctor --json               <span class="c"># machine-readable, for CI</spa
     your <code>.p12</code> against the ones the profile embeds.</li>
     <li><strong>Ad-hoc masquerading as App Store.</strong> A profile that provisions specific devices
     is an ad-hoc profile. Exporting it with <code>app-store</code> fails late and confusingly.</li>
-    <li><strong>Expiry, early.</strong> Certificates last three years and profiles one. It warns
+    <li><strong>Expiry, early.</strong> Certificates and profiles both last about one year. It warns
     thirty days out instead of on the morning you need to ship a hotfix.</li>
     <li><strong>The store APIs, for real.</strong> It distinguishes a rejected key (401) from a key
     with no role granted (403), and opens and immediately abandons a Play edit — the only way to

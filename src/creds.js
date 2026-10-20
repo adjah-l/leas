@@ -5,9 +5,9 @@ import { scanCredentials, WARN_DAYS } from './credential-scan.js';
 /**
  * `leas creds` — what is about to expire.
  *
- * Distribution certificates last three years and provisioning profiles one, so
- * the failure mode is not that you forget: it is that three years pass and the
- * reminder arrives as a broken release. This is the thing that has to be
+ * Apple distribution certificates and provisioning profiles both last about one
+ * year, so the failure mode is not that you forget: it is that a year passes and
+ * the reminder arrives as a broken release. This is the thing that has to be
  * checked on a schedule rather than remembered.
  */
 export async function creds({ projectRoot, platforms, profileName, warnDays = WARN_DAYS, json = false }) {
