@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { parseArgs } from 'node:util';
-import { existsSync, writeFileSync, readdirSync, statSync } from 'node:fs';
+import { existsSync, writeFileSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import path from 'node:path';
 import { log, run, LeasError } from './util.js';
 import { loadConfig, buildProfile, submitProfile, readAppJson } from './config.js';
@@ -54,6 +54,8 @@ Flags
   --json             machine-readable output
   --site <url>       your hosted leas site (or set LEAS_SITE_URL)
   --token <t>        sync token for that site (or set LEAS_SYNC_TOKEN)
+  -v, --version      print the installed leas version
+  -h, --help         show this help
 `;
 
 const options = {
@@ -82,6 +84,7 @@ const options = {
   check: { type: 'boolean', default: false },
   json: { type: 'boolean', default: false },
   help: { type: 'boolean', short: 'h', default: false },
+  version: { type: 'boolean', short: 'v', default: false },
 };
 
 const { values: flags, positionals } = parseArgs({ options, allowPositionals: true });
@@ -94,6 +97,7 @@ main().catch((e) => {
 });
 
 async function main() {
+  if (flags.version) return console.log(packageVersion());
   if (flags.help || !command) return console.log(USAGE);
   switch (command) {
     case 'build': return cmdBuild();
@@ -118,6 +122,11 @@ async function main() {
     case 'init': return cmdInit();
     default: throw new LeasError(`Unknown command "${command}".\n${USAGE}`);
   }
+}
+
+/** The installed package's own version, read from its package.json. */
+function packageVersion() {
+  return JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8')).version;
 }
 
 function platforms() {
