@@ -1,11 +1,12 @@
 import http from 'node:http';
+import { validateProjectId } from './update-configure.js';
 import { manageUpdate } from './update-remote.js';
 import { readFileSync, existsSync, statSync } from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import { log, LeasError } from './util.js';
 import {
-  updateDir, resolveChannel, assetMetadata, safeJoin, mimeFor,
+  updatesRoot, updateDir, resolveChannel, assetMetadata, safeJoin, mimeFor,
 } from './update-store.js';
 
 /**
@@ -20,16 +21,43 @@ import {
  */
 export async function startUpdateServer({ projectRoot, port = 4190, baseUrl, privateKeyPath, token = process.env.LEAS_UPDATE_TOKEN }) {
   let url = (baseUrl ?? `http://localhost:${port}`).replace(/\/$/, '');
-  const privateKey = privateKeyPath && existsSync(privateKeyPath)
+  updatesRoot(projectRoot); // Fail at startup if the persistent volume is not writable.
+  const privateKey = process.env.LEAS_UPDATE_PRIVATE_KEY_BASE64
+    ? Buffer.from(process.env.LEAS_UPDATE_PRIVATE_KEY_BASE64, 'base64').toString('utf8')
+    : privateKeyPath && existsSync(privateKeyPath)
     ? readFileSync(privateKeyPath, 'utf8') : null;
+
+  if (privateKey) crypto.createPrivateKey(privateKey); // Validate before accepting traffic.
+
+  const projectTokens = JSON.parse(process.env.LEAS_UPDATE_PROJECT_TOKENS_JSON ?? '{}');
+  if (!projectTokens || typeof projectTokens !== 'object' || Array.isArray(projectTokens)) throw new LeasError('Invalid project token configuration.');
+  for (const [project, value] of Object.entries(projectTokens)) {
+    validateProjectId(project);
+    if (typeof value !== 'string' || !value) throw new LeasError('Project tokens must be non-empty strings.');
+  }
 
   const server = http.createServer(async (req, res) => {
     try {
       const target = new URL(req.url, url);
-      if (target.pathname.startsWith('/api/manage/')) return await manageUpdate(req, res, projectRoot, token, target.pathname.slice('/api/manage/'.length));
-      if (target.pathname === '/api/manifest') return await manifest({ req, res, projectRoot, baseUrl: url, privateKey });
-      if (target.pathname === '/api/assets') return assets({ req, res, projectRoot, target });
-      if (target.pathname === '/health') return json(res, 200, { ok: true, baseUrl: url });
+      if (target.pathname === '/health') return json(res, 200, { ok: true, baseUrl: url, mode: 'multi-project' });
+      let storageRoot = projectRoot;
+      let assetBase = url;
+      let operatorToken = token;
+      const match = /^\/projects\/([^/]+)(\/.*)$/.exec(target.pathname);
+      if (match) {
+        const project = validateProjectId(decodeURIComponent(match[1]));
+        storageRoot = path.join(projectRoot, 'projects', project);
+        assetBase = `${url}/projects/${project}`;
+        operatorToken = projectTokens[project] ?? token;
+        target.pathname = match[2];
+        // Unknown public project reads must not allocate directories on disk.
+        if (!target.pathname.startsWith('/api/manage/') && !existsSync(storageRoot)) {
+          return target.pathname === '/api/manifest' ? noUpdate(res) : json(res, 404, { error: 'Unknown project' });
+        }
+      }
+      if (target.pathname.startsWith('/api/manage/')) return await manageUpdate(req, res, storageRoot, operatorToken, target.pathname.slice('/api/manage/'.length));
+      if (target.pathname === '/api/manifest') return await manifest({ req, res, projectRoot: storageRoot, baseUrl: assetBase, privateKey });
+      if (target.pathname === '/api/assets') return assets({ req, res, projectRoot: storageRoot, target });
       json(res, 404, { error: 'Not found' });
     } catch (e) {
       log.err(e.message);

@@ -12,6 +12,7 @@ import { cloudBuild } from './cloud.js';
 import { createBuild, updateBuild } from './store.js';
 import { startDashboard, snapshot } from './dashboard.js';
 import { publishUpdate, rollbackUpdate, promoteUpdate, generateKeys } from './update-publish.js';
+import { configureUpdates, configuredUpdateUrl } from './update-configure.js';
 import { remoteRequest, packageUpdate } from './update-remote.js';
 import { startUpdateServer } from './update-server.js';
 import { doctor } from './doctor.js';
@@ -30,6 +31,7 @@ leas — self-hosted build & submit for Expo / React Native
   leas doctor   [--platform ios|android|all] [--profile production] [--offline] [--json]
   leas creds    [--platform ios|android|all] [--days 30] [--check] [--json]
 
+  leas update:configure  --url https://updates.example.com --project my-app [--channel production]
   leas update            --channel production [--message "..."] [--platform all]
   leas update:list       [--channel production] [--runtime 1.4.0]
   leas update:rollback   --channel production [--to <updateId> | --embedded]
@@ -75,6 +77,7 @@ const options = {
   message: { type: 'string' },
   url: { type: 'string' },
   runtime: { type: 'string' },
+  project: { type: 'string' },
   to: { type: 'string' },
   from: { type: 'string' },
   embedded: { type: 'boolean', default: false },
@@ -108,6 +111,7 @@ async function main() {
     case 'dashboard': return startDashboard({
       projectRoot, port: Number(flags.port), open: !flags['no-open'],
     });
+    case 'update:configure': return configureUpdates({ projectRoot, url: flags.url, project: flags.project, channel: flags.channel });
     case 'update': return cmdUpdate();
     case 'update:list': return cmdUpdateList();
     case 'update:rollback': return cmdUpdateRollback();
@@ -271,13 +275,14 @@ async function cmdPrebuild(list, { quiet = false } = {}) {
 }
 
 async function cmdUpdate() {
+  const url = flags.url ?? process.env.LEAS_UPDATE_URL ?? configuredUpdateUrl(projectRoot);
+  if (url && !process.env.LEAS_UPDATE_TOKEN) throw new LeasError('Set LEAS_UPDATE_TOKEN before remote publishing.');
   const records = await publishUpdate({
     projectRoot,
     channel: flags.channel,
     message: flags.message,
     platform: flags.platform ?? 'all',
   });
-  const url = flags.url ?? process.env.LEAS_UPDATE_URL;
   if (url) {
     for (const record of [records].flat()) await remoteRequest(url, 'publish', packageUpdate(projectRoot, record));
     log.ok(`Published to ${url}`);
@@ -291,17 +296,21 @@ function currentRuntimeVersion(selectedPlatform) {
   return resolveRuntimeVersion(readAppJson(projectRoot), platform);
 }
 
-function cmdUpdateList() {
-  const updates = listUpdates(projectRoot, {
+async function cmdUpdateList() {
+  const url = flags.url ?? process.env.LEAS_UPDATE_URL ?? configuredUpdateUrl(projectRoot);
+  const filter = {
     channel: flags.channel === 'all' ? null : flags.channel,
     runtimeVersion: flags.runtime,
-  });
+  };
+  const updates = url ? await remoteRequest(url, 'list', filter) : listUpdates(projectRoot, filter);
+  if (flags.json) return console.log(JSON.stringify(updates, null, 2));
   if (!updates.length) {
     log.warn(`No updates published to "${flags.channel}".`);
     return;
   }
   for (const u of updates) {
-    const live = u.platforms.some(p => readPointer(projectRoot, flags.channel, u.runtimeVersion, p)?.updateId === u.id) ? '  <- serving now locally' : '';
+    const serving = url ? u.servingPlatforms.length > 0 : u.platforms.some(p => readPointer(projectRoot, flags.channel, u.runtimeVersion, p)?.updateId === u.id);
+    const live = serving ? `  <- serving now${url ? ' remotely' : ' locally'}` : '';
     log.info(`${u.id}${live}`);
     log.dim(`  ${channelsOf(u).join(', ')} · runtime ${u.runtimeVersion} · ${u.platforms.join('+')} · ` +
       `${u.assetCount} assets · ${(u.bytes / 1e6).toFixed(1)} MB`);
@@ -318,7 +327,7 @@ async function cmdUpdateRollback() {
     to: flags.to,
     embedded: flags.embedded, platform,
   };
-  const url = flags.url ?? process.env.LEAS_UPDATE_URL;
+  const url = flags.url ?? process.env.LEAS_UPDATE_URL ?? configuredUpdateUrl(projectRoot);
   if (url) await remoteRequest(url, 'rollback', args); else rollbackUpdate(args);
   }
 }
@@ -327,7 +336,7 @@ async function cmdUpdatePromote() {
   if (!flags.from || !flags.to) throw new LeasError('update:promote needs --from and --to.');
   for (const platform of platforms()) {
     const args = { projectRoot, from: flags.from, to: flags.to, runtimeVersion: currentRuntimeVersion(platform), platform };
-    const url = flags.url ?? process.env.LEAS_UPDATE_URL;
+    const url = flags.url ?? process.env.LEAS_UPDATE_URL ?? configuredUpdateUrl(projectRoot);
     if (url) await remoteRequest(url, 'promote', args); else promoteUpdate(args);
   }
 }

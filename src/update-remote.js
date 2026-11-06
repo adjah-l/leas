@@ -1,7 +1,7 @@
 import { readFileSync, writeFileSync, mkdirSync, renameSync, rmSync, existsSync } from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
-import { updateDir, updatesRoot, safeJoin, setPointer } from './update-store.js';
+import { updateDir, updatesRoot, safeJoin, setPointer, listUpdates, resolveChannel } from './update-store.js';
 import { rollbackUpdate, promoteUpdate } from './update-publish.js';
 import { LeasError } from './util.js';
 
@@ -50,6 +50,14 @@ export async function manageUpdate(req, res, projectRoot, token, action) {
     const payload = JSON.parse(Buffer.concat(chunks).toString('utf8'));
     let result;
     if (action === 'publish') result = installUpdate(projectRoot, payload);
+    else if (action === 'list') {
+      result = listUpdates(projectRoot, { channel: payload.channel, runtimeVersion: payload.runtimeVersion }).map(record => ({
+        ...record, servingPlatforms: record.platforms.filter(platform => {
+          const selected = resolveChannel(projectRoot, payload.channel ?? record.channel, record.runtimeVersion, platform);
+          return selected.kind === 'update' && selected.update.id === record.id;
+        }),
+      }));
+    }
     else if (action === 'rollback' || action === 'promote') {
       if (!['ios', 'android'].includes(payload.platform)) throw new LeasError('Specify ios or android.');
       const { channel, runtimeVersion, to, embedded, from, platform } = payload;

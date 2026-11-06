@@ -98,3 +98,53 @@ test('signed manifests verify and asset symlinks cannot escape storage', async t
   rmSync(icon); symlinkSync(keyPath, icon);
   assert.equal((await fetch(`${url}/api/assets?updateId=${release.record.id}&asset=assets/icon`)).status, 404);
 });
+
+test('remote history identifies the serving platforms', async t => {
+  const { root, url } = await setup(t);
+  const release = fixture(); installUpdate(root, release);
+  const history = await remoteRequest(url, 'list', { channel: 'production' }, 'test-token');
+  assert.equal(history[0].id, release.record.id);
+  assert.deepEqual(history[0].servingPlatforms, ['ios']);
+  await assert.rejects(remoteRequest(url, 'list', {}, 'wrong'), /401/);
+});
+
+test('shared server keeps projects, assets, channels, and rollback isolated', async t => {
+  const { root, url } = await setup(t);
+  const a = fixture(); const b = fixture();
+  await remoteRequest(`${url}/projects/app-a`, 'publish', a, 'test-token');
+  await remoteRequest(`${url}/projects/app-b`, 'publish', b, 'test-token');
+  const headers = { 'expo-platform': 'ios', 'expo-runtime-version': '1' };
+  const response = await fetch(`${url}/projects/app-a/api/manifest`, { headers });
+  const body = await response.text();
+  assert.match(body, new RegExp(a.record.id));
+  assert.ok(!body.includes(b.record.id));
+  assert.match(body, /\/projects\/app-a\/api\/assets/);
+  assert.equal((await fetch(`${url}/projects/app-b/api/assets?updateId=${a.record.id}&asset=bundles/app.js`)).status, 404);
+  await remoteRequest(`${url}/projects/app-a`, 'rollback', { channel: 'production', runtimeVersion: '1', platform: 'ios', embedded: true }, 'test-token');
+  assert.match(await (await fetch(`${url}/projects/app-a/api/manifest`, { headers })).text(), /rollBackToEmbedded/);
+  assert.match(await (await fetch(`${url}/projects/app-b/api/manifest`, { headers })).text(), new RegExp(b.record.id));
+  assert.equal((await fetch(`${url}/projects/unknown/api/manifest`, { headers })).status, 204);
+  const { existsSync } = await import('node:fs');
+  assert.equal(existsSync(path.join(root, 'projects/unknown')), false);
+  await assert.rejects(remoteRequest(`${url}/projects/app-a`, 'list', {}, 'wrong'), /401/);
+});
+
+test('configure preserves existing Expo settings and persists a project URL', async t => {
+  const { configureUpdates } = await import('../src/update-configure.js');
+  const root = mkdtempSync(path.join(os.tmpdir(), 'leas-config-'));
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  writeFileSync(path.join(root, 'app.json'), JSON.stringify({ expo: { name: 'Test', runtimeVersion: { policy: 'appVersion' }, updates: { checkAutomatically: 'ON_LOAD' } } }));
+  configureUpdates({ projectRoot: root, url: 'https://updates.example.com', project: 'app-a' });
+  const app = JSON.parse(readFileSync(path.join(root, 'app.json'))).expo;
+  assert.equal(app.updates.url, 'https://updates.example.com/projects/app-a/api/manifest');
+  assert.equal(app.updates.checkAutomatically, 'ON_LOAD');
+  assert.equal(app.runtimeVersion.policy, 'appVersion');
+  assert.equal(JSON.parse(readFileSync(path.join(root, 'leas.json'))).update.project, 'app-a');
+  assert.throws(() => configureUpdates({ projectRoot: root, url: 'https://updates.example.com', project: '../escape' }), /Project ID/);
+});
+
+test('signing arguments are redacted from logs', async () => {
+  const { redactCommandArgs } = await import('../src/util.js');
+  assert.deepEqual(redactCommandArgs('security', ['import', 'cert', '-P', 'secret']), ['import', 'cert', '-P', '[REDACTED]']);
+  assert.deepEqual(redactCommandArgs('jarsigner', ['-storepass', 'secret']), ['-storepass', '[REDACTED]']);
+});

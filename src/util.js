@@ -18,7 +18,7 @@ export class LeasError extends Error {}
 /** Run a command, streaming output. Rejects on non-zero exit. */
 export function run(cmd, args, opts = {}) {
   return new Promise((resolve, reject) => {
-    log.dim(`$ ${cmd} ${args.map((a) => (/\s/.test(a) ? JSON.stringify(a) : a)).join(' ')}`);
+    log.dim(`$ ${cmd} ${redactCommandArgs(cmd, args).map((a) => (/\s/.test(a) ? JSON.stringify(a) : a)).join(' ')}`);
     const p = spawn(cmd, args, { stdio: 'inherit', ...opts });
     p.on('error', reject);
     p.on('close', (code) =>
@@ -50,4 +50,11 @@ export function requireEnv(name, hint) {
   const v = process.env[name];
   if (!v) throw new LeasError(`Missing env var ${name}.${hint ? ` ${hint}` : ''}`);
   return v;
+}
+
+/** Do not print signing passwords in build logs. */
+export function redactCommandArgs(cmd, args) {
+  const sensitive = new Set(['-storepass', '-keypass', '--ks-pass', '--key-pass']);
+  if (path.basename(cmd) === 'security') for (const flag of ['-p', '-P', '-k']) sensitive.add(flag);
+  return args.map((value, index) => index && sensitive.has(args[index - 1]) ? '[REDACTED]' : value);
 }

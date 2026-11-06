@@ -136,7 +136,10 @@ Manifests and directives are served as `multipart/mixed`, assets are content-has
 by the client, and `leas update:keys` enables RSA code signing so a device refuses any update you
 did not sign (after generating and embedding the X.509 certificate).
 
-Remote publishing is available with `LEAS_UPDATE_URL` and `LEAS_UPDATE_TOKEN`.
+One shared server can serve many apps with isolated project storage. Run
+`leas update:configure --url https://updates.example.com --project my-app` once
+in each compatible app repository; future update commands use its saved URL.
+Remote publishing is also available with `LEAS_UPDATE_URL` and `LEAS_UPDATE_TOKEN`.
 `--platform all` exports iOS and Android separately without invoking web export.
 See the [deployment and migration guide](docs/ota.md) for Docker hosting, app
 configuration, signing, rollout checks, and current limitations.
