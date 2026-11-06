@@ -287,7 +287,7 @@ async function checkAndroid(r, { projectRoot, config, profileName, offline }) {
 
   let sa = null;
   await r.probe(G, 'Play service account', async () => {
-    const file = resolve(projectRoot, submit.serviceAccountKeyPath, 'LEAS_PLAY_SERVICE_ACCOUNT_BASE64', 'play-service-account.json');
+    const file = resolveCredential(projectRoot, submit.serviceAccountKeyPath, 'LEAS_PLAY_SERVICE_ACCOUNT_BASE64', 'play-service-account.json');
     sa = JSON.parse(readFileSync(file, 'utf8'));
     if (!sa.client_email || !sa.private_key) {
       sa = null;

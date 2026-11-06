@@ -3,7 +3,7 @@ import type { CredentialRecord } from '@/lib/types';
 /**
  * The expiry watch, as a panel.
  *
- * Certificates last three years and provisioning profiles one, which is long
+ * Apple distribution certificates and provisioning profiles both last about one year, which is long
  * enough that nobody remembers and short enough that everybody is eventually
  * caught. Sorting by soonest-first means the thing about to break is the thing
  * at the top.

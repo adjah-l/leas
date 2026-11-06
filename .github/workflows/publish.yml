@@ -1,0 +1,62 @@
+name: publish
+
+# Publishes leas-cli to npm when a GitHub release is published.
+#
+# Uses npm trusted publishing (OIDC): npm verifies this workflow's GitHub
+# identity directly, so there is no NPM_TOKEN secret to store, leak, or rotate.
+# The package gets a signed provenance statement linking it to this repo,
+# this workflow, and the exact commit it was built from.
+#
+# One-time setup on npmjs.com (package owner only):
+#   leas-cli > Settings > Trusted Publisher > GitHub Actions
+#   Organization or user: adjah-l   Repository: leas   Workflow filename: publish.yml
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+  id-token: write   # lets npm verify this run's identity via OIDC
+
+concurrency:
+  group: npm-publish
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.event.release.tag_name }}
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+
+      # Trusted publishing needs npm 11.5.1 or newer.
+      - run: npm install -g npm@latest
+
+      - name: Release tag matches package.json
+        run: |
+          tag="${{ github.event.release.tag_name }}"
+          version="$(node -p 'require("./package.json").version')"
+          if [ "$tag" != "v$version" ]; then
+            echo "Release tag $tag does not match package.json version $version"
+            exit 1
+          fi
+
+      - name: Version is not already on npm
+        run: |
+          version="$(node -p 'require("./package.json").version')"
+          if npm view "leas-cli@$version" version >/dev/null 2>&1; then
+            echo "leas-cli@$version is already published"
+            exit 1
+          fi
+
+      - run: npm test
+      - run: npm run lint
+
+      - run: npm publish --provenance --access public
