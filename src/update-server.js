@@ -48,7 +48,7 @@ export async function startUpdateServer({ projectRoot, port = 4190, baseUrl, pri
         const project = validateProjectId(decodeURIComponent(match[1]));
         storageRoot = path.join(projectRoot, 'projects', project);
         assetBase = `${url}/projects/${project}`;
-        operatorToken = projectTokens[project] ?? token;
+        operatorToken = Object.hasOwn(projectTokens, project) ? projectTokens[project] : token;
         target.pathname = match[2];
         // Unknown public project reads must not allocate directories on disk.
         if (!target.pathname.startsWith('/api/manage/') && !existsSync(storageRoot)) {

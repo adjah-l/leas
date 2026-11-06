@@ -148,3 +148,9 @@ test('signing arguments are redacted from logs', async () => {
   assert.deepEqual(redactCommandArgs('security', ['import', 'cert', '-P', 'secret']), ['import', 'cert', '-P', '[REDACTED]']);
   assert.deepEqual(redactCommandArgs('jarsigner', ['-storepass', 'secret']), ['-storepass', '[REDACTED]']);
 });
+
+test('project names cannot inherit an authorization token from Object.prototype', async t => {
+  const { url } = await setup(t);
+  await assert.rejects(remoteRequest(`${url}/projects/constructor`, 'list', {}, String(Object)), /401/);
+  assert.deepEqual(await remoteRequest(`${url}/projects/constructor`, 'list', {}, 'test-token'), []);
+});

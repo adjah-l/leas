@@ -42,7 +42,7 @@ certificate in the app, with `codeSigningMetadata` using `keyid: "main"` and
 Install `expo-updates` using `npx expo install expo-updates`. From each supported repository:
 
 ```sh
-npm install --save-dev leas-cli@1.1.0
+npm install --save-dev leas-cli@1.1.1
 npx leas update:configure --url https://updates.example.com --project my-app
 ```
 
