@@ -12,6 +12,8 @@ import { cloudBuild } from './cloud.js';
 import { createBuild, updateBuild } from './store.js';
 import { startDashboard, snapshot } from './dashboard.js';
 import { publishUpdate, rollbackUpdate, promoteUpdate, generateKeys } from './update-publish.js';
+import { configureUpdates, configuredUpdateUrl } from './update-configure.js';
+import { remoteRequest, packageUpdate } from './update-remote.js';
 import { startUpdateServer } from './update-server.js';
 import { doctor } from './doctor.js';
 import { creds } from './creds.js';
@@ -29,6 +31,7 @@ leas — self-hosted build & submit for Expo / React Native
   leas doctor   [--platform ios|android|all] [--profile production] [--offline] [--json]
   leas creds    [--platform ios|android|all] [--days 30] [--check] [--json]
 
+  leas update:configure  --url https://updates.example.com --project my-app [--channel production]
   leas update            --channel production [--message "..."] [--platform all]
   leas update:list       [--channel production] [--runtime 1.4.0]
   leas update:rollback   --channel production [--to <updateId> | --embedded]
@@ -47,7 +50,8 @@ Flags
   --port <n>         server port (dashboard 4180, updates 4190)
   --channel <name>   update channel (default production)
   --message <text>   what this update changes
-  --url <base>       public base URL the devices will reach the update server on
+  --url <base>       OTA server URL; update/rollback/promote use LEAS_UPDATE_URL too
+                     remote writes require LEAS_UPDATE_TOKEN in the environment
   --offline          skip the checks that call Apple and Google
   --days <n>         how far ahead leas creds warns (default 30)
   --check            exit non-zero if anything expires within --days
@@ -73,6 +77,7 @@ const options = {
   message: { type: 'string' },
   url: { type: 'string' },
   runtime: { type: 'string' },
+  project: { type: 'string' },
   to: { type: 'string' },
   from: { type: 'string' },
   embedded: { type: 'boolean', default: false },
@@ -106,6 +111,7 @@ async function main() {
     case 'dashboard': return startDashboard({
       projectRoot, port: Number(flags.port), open: !flags['no-open'],
     });
+    case 'update:configure': return configureUpdates({ projectRoot, url: flags.url, project: flags.project, channel: flags.channel });
     case 'update': return cmdUpdate();
     case 'update:list': return cmdUpdateList();
     case 'update:rollback': return cmdUpdateRollback();
@@ -269,32 +275,42 @@ async function cmdPrebuild(list, { quiet = false } = {}) {
 }
 
 async function cmdUpdate() {
-  return publishUpdate({
+  const url = flags.url ?? process.env.LEAS_UPDATE_URL ?? configuredUpdateUrl(projectRoot);
+  if (url && !process.env.LEAS_UPDATE_TOKEN) throw new LeasError('Set LEAS_UPDATE_TOKEN before remote publishing.');
+  const records = await publishUpdate({
     projectRoot,
     channel: flags.channel,
     message: flags.message,
     platform: flags.platform ?? 'all',
   });
+  if (url) {
+    for (const record of [records].flat()) await remoteRequest(url, 'publish', packageUpdate(projectRoot, record));
+    log.ok(`Published to ${url}`);
+  } else log.warn('Published locally only. Set LEAS_UPDATE_URL for remote delivery.');
+  return records;
 }
 
-function currentRuntimeVersion() {
+function currentRuntimeVersion(selectedPlatform) {
   if (flags.runtime) return flags.runtime;
-  const platform = flags.platform === 'android' ? 'android' : 'ios';
+  const platform = selectedPlatform ?? (flags.platform === 'android' ? 'android' : 'ios');
   return resolveRuntimeVersion(readAppJson(projectRoot), platform);
 }
 
-function cmdUpdateList() {
-  const updates = listUpdates(projectRoot, {
+async function cmdUpdateList() {
+  const url = flags.url ?? process.env.LEAS_UPDATE_URL ?? configuredUpdateUrl(projectRoot);
+  const filter = {
     channel: flags.channel === 'all' ? null : flags.channel,
     runtimeVersion: flags.runtime,
-  });
+  };
+  const updates = url ? await remoteRequest(url, 'list', filter) : listUpdates(projectRoot, filter);
+  if (flags.json) return console.log(JSON.stringify(updates, null, 2));
   if (!updates.length) {
     log.warn(`No updates published to "${flags.channel}".`);
     return;
   }
   for (const u of updates) {
-    const pin = readPointer(projectRoot, flags.channel, u.runtimeVersion);
-    const live = pin?.updateId === u.id ? '  <- serving now' : '';
+    const serving = url ? u.servingPlatforms.length > 0 : u.platforms.some(p => readPointer(projectRoot, flags.channel, u.runtimeVersion, p)?.updateId === u.id);
+    const live = serving ? `  <- serving now${url ? ' remotely' : ' locally'}` : '';
     log.info(`${u.id}${live}`);
     log.dim(`  ${channelsOf(u).join(', ')} · runtime ${u.runtimeVersion} · ${u.platforms.join('+')} · ` +
       `${u.assetCount} assets · ${(u.bytes / 1e6).toFixed(1)} MB`);
@@ -302,21 +318,27 @@ function cmdUpdateList() {
   }
 }
 
-function cmdUpdateRollback() {
-  return rollbackUpdate({
+async function cmdUpdateRollback() {
+  for (const platform of platforms()) {
+  const args = {
     projectRoot,
     channel: flags.channel,
-    runtimeVersion: currentRuntimeVersion(),
+    runtimeVersion: currentRuntimeVersion(platform),
     to: flags.to,
-    embedded: flags.embedded,
-  });
+    embedded: flags.embedded, platform,
+  };
+  const url = flags.url ?? process.env.LEAS_UPDATE_URL ?? configuredUpdateUrl(projectRoot);
+  if (url) await remoteRequest(url, 'rollback', args); else rollbackUpdate(args);
+  }
 }
 
-function cmdUpdatePromote() {
+async function cmdUpdatePromote() {
   if (!flags.from || !flags.to) throw new LeasError('update:promote needs --from and --to.');
-  return promoteUpdate({
-    projectRoot, from: flags.from, to: flags.to, runtimeVersion: currentRuntimeVersion(),
-  });
+  for (const platform of platforms()) {
+    const args = { projectRoot, from: flags.from, to: flags.to, runtimeVersion: currentRuntimeVersion(platform), platform };
+    const url = flags.url ?? process.env.LEAS_UPDATE_URL ?? configuredUpdateUrl(projectRoot);
+    if (url) await remoteRequest(url, 'promote', args); else promoteUpdate(args);
+  }
 }
 
 /** Push local build and update history to the hosted dashboard. */

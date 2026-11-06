@@ -129,10 +129,20 @@ leas update:serve --url https://updates.example.com
 
 This is a self-hosted implementation of the [Expo Updates protocol
 v1](https://docs.expo.dev/technical-specs/expo-updates-1/), so the stock `expo-updates` client
-talks to it unmodified — point `expo.updates.url` at your server and nothing else changes.
+talks to it unmodified. Configure `expo.updates.url` with the `/api/manifest` endpoint,
+then ship a new native binary containing that configuration. Existing Expo-hosted
+binaries continue to use Expo until users upgrade.
 Manifests and directives are served as `multipart/mixed`, assets are content-hashed and verified
 by the client, and `leas update:keys` enables RSA code signing so a device refuses any update you
-did not sign.
+did not sign (after generating and embedding the X.509 certificate).
+
+One shared server can serve many apps with isolated project storage. Run
+`leas update:configure --url https://updates.example.com --project my-app` once
+in each compatible app repository; future update commands use its saved URL.
+Remote publishing is also available with `LEAS_UPDATE_URL` and `LEAS_UPDATE_TOKEN`.
+`--platform all` exports iOS and Android separately without invoking web export.
+See the [deployment and migration guide](docs/ota.md) for Docker hosting, app
+configuration, signing, rollout checks, and current limitations.
 
 **`runtimeVersion` is the safety mechanism.** An update only reaches binaries built against a
 matching runtime version. Updates carry JS and assets only — a native change needs a new build,

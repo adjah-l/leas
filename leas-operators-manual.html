@@ -556,102 +556,86 @@ leas dashboard --port 5000 --no-open</pre>
 <!-- ============ updates ============ -->
 <section id="updates">
   <div class="sec-head"><span class="sec-num">06</span><h2>Over-the-air updates</h2></div>
-
-  <p>Ship a JavaScript fix to everyone already running your app, without a build, without a
-  submission, and without waiting on review. This is the feature people ask for first, because
-  it turns a two-day emergency into a two-minute one.</p>
-
-  <div class="note warn">
-    <span class="note-l">What you can and cannot send this way</span>
-    <p>An update replaces your <strong>JavaScript and assets</strong> — screens, logic, copy,
-    images, fonts. It cannot change <strong>native code</strong>. Adding a library with a native
-    module, upgrading the Expo SDK, changing permissions or app icons: all of those need a new
-    build submitted to the stores. Sending JS that calls native code the installed binary does
-    not have will crash the app on launch for every user who receives it.</p>
-  </div>
-
-  <h3>runtimeVersion is the whole safety mechanism</h3>
-  <p>Every binary you build has a <code>runtimeVersion</code> baked into it, and every update is
-  published against one. A device only accepts an update whose runtime version matches its own.
-  That single string is what stops the crash described above.</p>
-  <p>Set it in <code>app.json</code>:</p>
-<pre>"expo": {
-  "runtimeVersion": "1.4.0",              <span class="c">// or a policy:</span>
-  "runtimeVersion": { "policy": "appVersion" },
-  "updates": { "url": "https://updates.yourcompany.com/api/manifest" }
+  <p>LEAS 1.1 adds authenticated remote publishing to the free, self-hosted update server.
+  Publish from your Mac or CI, test a preview channel, then promote the same JavaScript and
+  asset bytes to production. No LEAS account or Pro subscription is required.</p>
+  <div class="note warn"><span class="note-l">Migration requires a native release</span>
+  <p>Install <code>expo-updates</code>, configure the HTTPS manifest URL, runtime and channel,
+  and ship one new store binary per platform. Existing binaries that point at
+  <code>u.expo.dev</code> still use Expo. Keep their EAS Update service available during migration.
+  Native library, SDK, permission and certificate changes require another native release.</p></div>
+  <h3>1. Run a persistent update server</h3>
+  <p>Use one shared server and persistent volume for your apps, with a unique project ID per repository. HTTPS, backups, monitoring and
+  hosting costs belong to the operator. The Dockerfile and Railway configuration are included in
+  the product repository. Do not run this disk-backed server on ephemeral serverless storage.</p>
+<pre>export LEAS_UPDATE_TOKEN=&lt;secret-from-your-secret-manager&gt;
+leas update:serve --port 4190 --url https://updates.example.com</pre>
+  <p><code>/health</code> reports liveness; <code>/api/manifest</code> serves manifests;
+  <code>/api/assets</code> serves exported assets. Authenticated management lives under
+  <code>/api/manage/</code>. Back up the persistent data directory, including <code>projects/*/.leas/updates</code> and retain old releases.</p>
+  <h3>2. Configure and build each app</h3>
+<pre>npm install --save-dev leas-cli@1.1.0
+leas update:configure --url https://updates.example.com --project my-app</pre>
+  <p>One shared service supports many repositories. Each project gets its own releases,
+  channels, runtime matching, assets and rollback state under <code>/projects/my-app</code>.
+  No additional server is needed. The project URL is saved in <code>leas.json</code> and used
+  automatically by publish, list, promote and rollback. The first authenticated publish creates
+  the project. Dynamic app configs need the printed settings applied manually.</p>
+<pre>{
+  "expo": {
+    "runtimeVersion": { "policy": "appVersion" },
+    "updates": {
+      "url": "https://updates.example.com/projects/my-app/api/manifest",
+      "requestHeaders": { "expo-channel-name": "production" }
+    }
+  }
 }</pre>
-  <p><code>"appVersion"</code> is the sensible default: your runtime version follows
-  <code>expo.version</code>, so bumping the app version for a native change automatically stops
-  old updates reaching new binaries. Bump it whenever native code changes, and never otherwise.</p>
-  <div class="note"><span class="note-l">The number one confusion</span>
-  <p>"I published an update and nothing happened" is almost always a runtime version mismatch —
-  the installed app was built against a different one, so the server correctly refuses to serve
-  it. <code>leas update:list</code> shows the runtime version of every update; compare it against
-  the build that is actually on the device.</p></div>
-
-  <h3>Channels</h3>
-  <p>A channel is a named stream of updates. Devices ask for one by name, so the same app binary
-  can follow <code>preview</code> internally and <code>production</code> in the store.</p>
-<pre>leas update --channel preview --message "Try the new checkout"
-<span class="c"># looks good in testing — same bundle, no re-export</span>
-leas update:promote --from preview --to production</pre>
-  <p>Promotion is additive: the update stays available on <code>preview</code> and becomes
-  available on <code>production</code> too. Nothing is rebuilt, so what you tested is byte-for-byte
-  what ships.</p>
-
-  <h3>Publishing</h3>
-<pre>leas update --channel production --message "Fix checkout crash"</pre>
-  <p>This runs <code>expo export</code>, hashes every asset, and files the result under an id
-  derived from the export's own metadata — so republishing identical code produces an identical
-  id, exactly as EAS does. The channel then points at it, and the next device to check in gets it.</p>
-
-  <h3>Rolling back</h3>
-  <p>Faster than publishing, because nothing is rebuilt — a rollback just re-points the channel.</p>
-<pre>leas update:rollback --channel production                    <span class="c"># back one update</span>
-leas update:rollback --channel production --to &lt;updateId&gt;     <span class="c"># back to a specific one</span>
-leas update:rollback --channel production --embedded          <span class="c"># back to the binary itself</span></pre>
-  <p><code>--embedded</code> is the emergency stop. It tells devices to discard every downloaded
-  update and run the bundle compiled into the app they installed from the store. Reach for it when
-  you are not sure which update broke things — it returns everyone to a known-good state in one
-  command, and nothing is deleted, so you can point the channel back afterwards.</p>
-
-  <h3>Running the update server</h3>
-  <p>Unlike the dashboard, this one has to be reachable by phones on the internet.</p>
-<pre>leas update:serve --url https://updates.yourcompany.com</pre>
-  <p>It is a plain Node HTTP server with two endpoints — <code>/api/manifest</code> answers "is
-  there anything new for me?", and <code>/api/assets</code> serves the bundle and images. Host it
-  anywhere that runs Node. For local testing against a real device, expose your machine with a
-  tunnel and pass the tunnel's URL to <code>--url</code>; asset URLs are generated from it, so a
-  wrong value produces manifests whose assets nobody can fetch.</p>
-
+  <p>Merge these fields with your existing config. Review your runtime policy: a matching string
+  is only safe when native code is actually compatible. Bump the app version for native changes
+  when using <code>appVersion</code>. LEAS does not compute fingerprint runtimes yet.</p>
+  <p>Regenerate or update existing native projects before building. LEAS skips prebuild when
+  native directories already exist, so changing app.json alone does not update those projects.
+  Build a preview-channel binary for testing and a production-channel binary for the store.</p>
+  <h3>3. Publish from your repository</h3>
+<pre>export LEAS_UPDATE_URL=https://updates.example.com/projects/my-app
+<span class="c"># Load LEAS_UPDATE_TOKEN from a secret manager or CI secret.</span>
+leas update --channel preview --platform all --message "Fix checkout"
+leas update:list --channel preview --runtime 1.0.0 --json
+leas update:promote --from preview --to production --platform ios --runtime 1.0.0
+leas update:promote --from preview --to production --platform android --runtime 1.0.0</pre>
+  <p><code>--platform all</code> exports iOS and Android separately, avoiding web export.
+  Channels are isolated by runtime and platform. A publish receives a new UUID; existing
+  release bytes are never overwritten. Promotion republishes the tested bytes with a new
+  release identity and time so devices can select it.</p>
+  <p>Without a URL in <code>leas.json</code>, <code>LEAS_UPDATE_URL</code> or <code>--url</code>, publishing and management are local only. With the URL set, list, promote and rollback operate on that server. Load the same
+  production environment used by the binary; LEAS does not fetch your EAS environment.</p>
+  <h3>4. Roll back</h3>
+<pre>leas update:rollback --channel production --platform ios --runtime 1.0.0 --to UPDATE_UUID
+leas update:rollback --channel production --platform android --runtime 1.0.0 --embedded</pre>
+  <p>An older release is republished under a fresh identity and timestamp. Embedded rollback
+  tells clients to return to the bundle shipped in the binary. Devices receive the instruction
+  at their next update check; this is not an immediate push notification.</p>
   <h3>Code signing</h3>
-  <p>Without it, anyone who can reach your update URL — or spoof it — can run arbitrary JavaScript
-  inside your app. With it, the app refuses any update not signed by your key.</p>
 <pre>leas update:keys
 npx @expo/code-signing-certificates generate-certificate \
   --key-input-directory credentials/updates \
   --certificate-output-directory credentials/updates</pre>
-  <p>Then point <code>expo.updates.codeSigningCertificate</code> at the generated certificate and
-  rebuild. From then on leas signs every manifest and directive it serves, and a device that
-  cannot verify the signature ignores the update rather than running it.</p>
-  <div class="note warn"><span class="note-l">Turn this on before you have users</span>
-  <p>Enabling code signing requires a new binary, because the certificate is compiled into the app.
-  Doing it on day one costs nothing; doing it after launch means waiting for everyone to update
-  through the store first.</p></div>
-
-  <h3>What a device actually does</h3>
-  <ol>
-    <li>On launch, the app asks your manifest endpoint, sending its platform, runtime version,
-    channel, and the id of the update it is currently running.</li>
-    <li>leas replies with a manifest for a newer update, or a <em>no update available</em>
-    directive, or a <em>roll back to embedded</em> directive.</li>
-    <li>Given a manifest, the app downloads each asset and verifies its hash before use.</li>
-    <li>The new version launches next time the app starts — or immediately, if you call
-    <code>Updates.reloadAsync()</code> yourself.</li>
-  </ol>
-  <p class="small">That handshake is Expo's published updates protocol, so the stock
-  <code>expo-updates</code> library talks to leas with no patches — you point
-  <code>expo.updates.url</code> at your server and nothing else changes.</p>
+  <p>Embed the generated X.509 certificate with <code>expo.updates.codeSigningCertificate</code>
+  and metadata <code>{ "keyid": "main", "alg": "rsa-v1_5-sha256" }</code>. Mount the private
+  key on your server or supply <code>LEAS_UPDATE_PRIVATE_KEY_BASE64</code> through its secret
+  manager. The operator token and private key must never enter the client bundle.</p>
+  <p>The configured client verifies signed manifests and asset hashes. Enabling or rotating the
+  embedded certificate needs a new runtime and native build. Validate on release devices.</p>
+  <p>For team-specific publish access, configure <code>LEAS_UPDATE_PROJECT_TOKENS_JSON</code>
+  on the server as a map from project IDs to unique tokens. Each mapped project accepts only
+  its mapped token; unmapped projects accept the root operator token. Store tokens in CI secrets.</p>
+  <h3>Operational limits</h3>
+  <p>Use one replica with persistent disk. Uploads are bounded JSON/base64 up to 100 MiB including
+  encoding. Multi-platform operations are sequential, not atomic. There is no managed delivery,
+  percentage rollout, automatic Sentry upload or remote environment service. Pro is the hosted
+  dashboard, not hosted OTA delivery.</p>
+  <p>For Docker and Railway deployment, backups, acceptance checks and troubleshooting, see
+  <a href="https://github.com/adjah-l/leas/blob/main/docs/ota.md">the OTA operations guide</a>.</p>
 </section>
 
 <!-- ============ 5 ============ -->

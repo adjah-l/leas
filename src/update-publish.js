@@ -5,16 +5,18 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import { run, capture, log, LeasError } from './util.js';
 import {
-  updatesRoot, updateDir, sha256, uuidFromSha256Hex, resolveRuntimeVersion,
-  listUpdates, readUpdate, setPointer, writeUpdate,
+  updatesRoot, updateDir, resolveRuntimeVersion,
+  listUpdates, readUpdate, setPointer, writeUpdate, resolveChannel,
 } from './update-store.js';
 
-/**
- * Publish: export the JS bundle and assets, then file the result under an id
- * derived from the export's own metadata — so republishing identical code
- * produces the same update id, exactly as EAS does.
- */
+/** Export and publish an immutable release with a fresh identity. */
 export async function publishUpdate({ projectRoot, channel, message, platform = 'all' }) {
+  if (platform === 'all') {
+    const records = [];
+    for (const p of ['ios', 'android']) records.push(await publishUpdate({ projectRoot, channel, message, platform: p }));
+    return records;
+  }
+  if (!['ios', 'android'].includes(platform)) throw new LeasError('Expected ios, android, or all.');
   const dist = path.join(projectRoot, '.leas', 'export');
   rmSync(dist, { recursive: true, force: true });
 
@@ -53,11 +55,8 @@ export async function publishUpdate({ projectRoot, channel, message, platform = 
   }
   const runtimeVersion = runtimeVersions[0];
 
-  const id = uuidFromSha256Hex(sha256(metadataBuffer));
+  const id = crypto.randomUUID();
   const dir = updateDir(projectRoot, id);
-  if (existsSync(path.join(dir, 'update.json'))) {
-    log.warn(`Identical bundle already published as ${id} — republishing to "${channel}".`);
-  }
   mkdirSync(updatesRoot(projectRoot), { recursive: true });
   rmSync(dir, { recursive: true, force: true });
   cpSync(dist, dir, { recursive: true });
@@ -76,7 +75,7 @@ export async function publishUpdate({ projectRoot, channel, message, platform = 
   });
 
   // Publishing supersedes any pin left behind by an earlier rollback.
-  setPointer(projectRoot, channel, runtimeVersion, { updateId: id, reason: 'publish' });
+  for (const p of platforms) setPointer(projectRoot, channel, runtimeVersion, { updateId: id, reason: 'publish' }, p);
 
   log.ok(`Published ${id}`);
   log.info(`channel ${channel} · runtime ${runtimeVersion} · ${platforms.join(', ')}`);
@@ -85,17 +84,17 @@ export async function publishUpdate({ projectRoot, channel, message, platform = 
 }
 
 /** Point a channel at an already-published update. */
-export function rollbackUpdate({ projectRoot, channel, runtimeVersion, to, embedded }) {
+export function rollbackUpdate({ projectRoot, channel, runtimeVersion, to, embedded, platform }) {
   if (embedded) {
     setPointer(projectRoot, channel, runtimeVersion, {
       rollBackToEmbedded: { commitTime: new Date().toISOString() },
       reason: 'rollback to embedded',
-    });
+    }, platform);
     log.ok(`Channel "${channel}" (runtime ${runtimeVersion}) now rolls devices back to the built-in bundle.`);
     return { kind: 'embedded' };
   }
 
-  const history = listUpdates(projectRoot, { channel, runtimeVersion });
+  const history = listUpdates(projectRoot, { channel, runtimeVersion }).filter(u => !platform || u.platforms.includes(platform));
   if (!history.length) throw new LeasError(`No updates on channel "${channel}" for runtime ${runtimeVersion}.`);
 
   const target = to ? readUpdate(projectRoot, to) : history[1];
@@ -104,26 +103,24 @@ export function rollbackUpdate({ projectRoot, channel, runtimeVersion, to, embed
       `Only one update exists on "${channel}". Use --embedded to send devices back to the bundle ` +
       'shipped inside the binary.');
   }
-  setPointer(projectRoot, channel, runtimeVersion, { updateId: target.id, reason: 'rollback' });
-  log.ok(`Channel "${channel}" now serves ${target.id}`);
+  if (target.runtimeVersion !== runtimeVersion || (platform && !target.platforms.includes(platform))) throw new LeasError('Rollback target is incompatible.');
+  const restored = republish(projectRoot, target, channel);
+  for (const p of (platform ? [platform] : restored.platforms)) setPointer(projectRoot, channel, runtimeVersion, { updateId: restored.id, reason: 'rollback' }, p);
+  log.ok(`Channel "${channel}" now serves ${restored.id}`);
   log.info(`"${target.message}" · published ${target.createdAt}`);
-  return { kind: 'update', update: target };
+  return { kind: 'update', update: restored };
 }
 
 /** Move a tested update from one channel to another without re-exporting. */
-export function promoteUpdate({ projectRoot, from, to, runtimeVersion }) {
-  const source = listUpdates(projectRoot, { channel: from, runtimeVersion })[0];
+export function promoteUpdate({ projectRoot, from, to, runtimeVersion, platform }) {
+  const resolved = resolveChannel(projectRoot, from, runtimeVersion, platform);
+  const source = resolved.kind === 'update' ? resolved.update : null;
   if (!source) throw new LeasError(`Nothing on channel "${from}" for runtime ${runtimeVersion}.`);
 
   // Promotion adds a channel rather than moving the update off the one it was
   // tested on — the same bundle is now live on both.
-  const promoted = writeUpdate(projectRoot, {
-    ...source,
-    channels: [...new Set([...(source.channels ?? [source.channel]), to])],
-    promotedFrom: from,
-    promotedAt: new Date().toISOString(),
-  });
-  setPointer(projectRoot, to, runtimeVersion, { updateId: promoted.id, reason: `promote from ${from}` });
+  const promoted = republish(projectRoot, source, to);
+  for (const p of (platform ? [platform] : promoted.platforms)) setPointer(projectRoot, to, runtimeVersion, { updateId: promoted.id, reason: `promote from ${from}` }, p);
   log.ok(`Promoted ${promoted.id} from "${from}" to "${to}"`);
   log.info(`"${promoted.message}"`);
   return promoted;
@@ -170,4 +167,11 @@ async function gitContext(projectRoot) {
     git(['rev-parse', '--short', 'HEAD']),
   ]);
   return { branch, commit };
+}
+
+function republish(projectRoot, source, channel) {
+  const id = crypto.randomUUID();
+  cpSync(updateDir(projectRoot, source.id), updateDir(projectRoot, id), { recursive: true });
+  return writeUpdate(projectRoot, { ...source, id, channel, channels: [channel],
+    createdAt: new Date(Math.max(Date.now(), Date.parse(source.createdAt) + 1)).toISOString(), republishedFrom: source.id });
 }
