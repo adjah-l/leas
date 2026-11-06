@@ -1,0 +1,9 @@
+FROM node:22-alpine
+WORKDIR /opt/leas
+COPY package.json ./
+COPY src ./src
+RUN mkdir -p /data/.leas && chown -R node:node /data
+USER node
+WORKDIR /data
+EXPOSE 4190
+CMD ["sh", "-c", "exec node /opt/leas/src/cli.js update:serve --url \"$LEAS_PUBLIC_URL\""]

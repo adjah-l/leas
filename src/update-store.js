@@ -1,4 +1,4 @@
-import { readdirSync, readFileSync, writeFileSync, existsSync, mkdirSync, statSync } from 'node:fs';
+import { readdirSync, readFileSync, writeFileSync, existsSync, mkdirSync, statSync, realpathSync, renameSync } from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import { LeasError } from './util.js';
@@ -35,7 +35,7 @@ export function uuidFromSha256Hex(hex) {
 export function listUpdates(projectRoot, filter = {}) {
   const root = updatesRoot(projectRoot);
   return readdirSync(root)
-    .filter((f) => f !== 'pointers')
+    .filter((f) => /^[a-f0-9]{8}(-[a-f0-9]{4}){3}-[a-f0-9]{12}$/i.test(f))
     .map((id) => {
       const file = path.join(root, id, 'update.json');
       if (!existsSync(file)) return null;
@@ -51,40 +51,53 @@ export function listUpdates(projectRoot, filter = {}) {
 export const channelsOf = (u) => u.channels ?? (u.channel ? [u.channel] : []);
 
 export function readUpdate(projectRoot, updateId) {
-  const file = path.join(updatesRoot(projectRoot), updateId, 'update.json');
+  const file = path.join(updateDir(projectRoot, updateId), 'update.json');
   if (!existsSync(file)) throw new LeasError(`No update ${updateId}.`);
   return JSON.parse(readFileSync(file, 'utf8'));
 }
 
 export function writeUpdate(projectRoot, record) {
-  writeFileSync(path.join(updatesRoot(projectRoot), record.id, 'update.json'),
+  writeFileSync(path.join(updateDir(projectRoot, record.id), 'update.json'),
     JSON.stringify(record, null, 2) + '\n');
   return record;
 }
 
 export function updateDir(projectRoot, updateId) {
+  if (!/^[a-f0-9]{8}(-[a-f0-9]{4}){3}-[a-f0-9]{12}$/i.test(updateId)) throw new LeasError('Invalid update ID.');
   return path.join(updatesRoot(projectRoot), updateId);
 }
 
 /* ---------- channel pointers ---------- */
 
-const pointerFile = (projectRoot, channel, runtimeVersion) =>
-  path.join(updatesRoot(projectRoot), 'pointers', `${channel}__${runtimeVersion}.json`);
+const pointerFile = (projectRoot, channel, runtimeVersion, platform) => {
+  if (![channel, runtimeVersion].every(v => typeof v === 'string' && v.length && v.length < 256 && !/[\\/\0]/.test(v) && v !== '..')) throw new LeasError('Invalid channel or runtime version.');
+  if (platform && !['ios', 'android'].includes(platform)) throw new LeasError('Invalid platform.');
+  // Hash tuples to avoid ambiguous names and filesystem length limits.
+  const key = sha256(JSON.stringify([channel, runtimeVersion, platform ?? null]));
+  return path.join(updatesRoot(projectRoot), 'pointers', `${key}.json`);
+};
 
-export function setPointer(projectRoot, channel, runtimeVersion, pointer) {
-  writeFileSync(pointerFile(projectRoot, channel, runtimeVersion),
+export function setPointer(projectRoot, channel, runtimeVersion, pointer, platform) {
+  const file = pointerFile(projectRoot, channel, runtimeVersion, platform);
+  const temp = `${file}.${crypto.randomUUID()}.tmp`;
+  writeFileSync(temp,
     JSON.stringify({ channel, runtimeVersion, ...pointer,
       setAt: new Date().toISOString() }, null, 2) + '\n');
+  renameSync(temp, file);
 }
 
-export function readPointer(projectRoot, channel, runtimeVersion) {
-  const file = pointerFile(projectRoot, channel, runtimeVersion);
+export function readPointer(projectRoot, channel, runtimeVersion, platform) {
+  let file = pointerFile(projectRoot, channel, runtimeVersion, platform);
+  if (!existsSync(file) && !platform) {
+    const legacy = `${channel}__${runtimeVersion}.json`;
+    if (Buffer.byteLength(legacy) < 256) file = path.join(updatesRoot(projectRoot), 'pointers', legacy);
+  }
   if (!existsSync(file)) return null;
   try { return JSON.parse(readFileSync(file, 'utf8')); } catch { return null; }
 }
 
-export function clearPointer(projectRoot, channel, runtimeVersion) {
-  const file = pointerFile(projectRoot, channel, runtimeVersion);
+export function clearPointer(projectRoot, channel, runtimeVersion, platform) {
+  const file = pointerFile(projectRoot, channel, runtimeVersion, platform);
   if (existsSync(file)) writeFileSync(file, JSON.stringify({ cleared: true }, null, 2) + '\n');
 }
 
@@ -92,15 +105,16 @@ export function clearPointer(projectRoot, channel, runtimeVersion) {
  * What a device on this channel and runtime should be served.
  * An explicit pointer always wins — that is what makes a rollback immediate.
  */
-export function resolveChannel(projectRoot, channel, runtimeVersion) {
-  const pointer = readPointer(projectRoot, channel, runtimeVersion);
+export function resolveChannel(projectRoot, channel, runtimeVersion, platform) {
+  const pointer = readPointer(projectRoot, channel, runtimeVersion, platform) ?? readPointer(projectRoot, channel, runtimeVersion);
   if (pointer?.rollBackToEmbedded) {
     return { kind: 'rollback', commitTime: pointer.rollBackToEmbedded.commitTime };
   }
   if (pointer?.updateId) {
-    return { kind: 'update', update: readUpdate(projectRoot, pointer.updateId) };
+    const update = readUpdate(projectRoot, pointer.updateId);
+    if (update.runtimeVersion === runtimeVersion && (!platform || update.platforms.includes(platform))) return { kind: 'update', update };
   }
-  const newest = listUpdates(projectRoot, { channel, runtimeVersion })[0];
+  const newest = listUpdates(projectRoot, { channel, runtimeVersion }).find(u => !platform || u.platforms.includes(platform));
   return newest ? { kind: 'update', update: newest } : { kind: 'none' };
 }
 
@@ -182,5 +196,7 @@ export function safeJoin(dir, relative) {
   if (!existsSync(resolved) || !statSync(resolved).isFile()) {
     throw new LeasError(`No such asset: ${relative}`);
   }
+  const real = realpathSync(resolved);
+  if (!real.startsWith(realpathSync(base) + path.sep)) throw new LeasError("Asset symlink escapes update directory.");
   return resolved;
 }

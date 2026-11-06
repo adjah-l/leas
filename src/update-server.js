@@ -1,4 +1,5 @@
 import http from 'node:http';
+import { manageUpdate } from './update-remote.js';
 import { readFileSync, existsSync, statSync } from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
@@ -17,15 +18,16 @@ import {
  * is already running; the server answers with a newer manifest, a
  * noUpdateAvailable directive, or a rollBackToEmbedded directive.
  */
-export async function startUpdateServer({ projectRoot, port = 4190, baseUrl, privateKeyPath }) {
-  const url = baseUrl ?? `http://localhost:${port}`;
+export async function startUpdateServer({ projectRoot, port = 4190, baseUrl, privateKeyPath, token = process.env.LEAS_UPDATE_TOKEN }) {
+  let url = (baseUrl ?? `http://localhost:${port}`).replace(/\/$/, '');
   const privateKey = privateKeyPath && existsSync(privateKeyPath)
     ? readFileSync(privateKeyPath, 'utf8') : null;
 
   const server = http.createServer(async (req, res) => {
     try {
       const target = new URL(req.url, url);
-      if (target.pathname === '/api/manifest') return manifest({ req, res, projectRoot, baseUrl: url, privateKey });
+      if (target.pathname.startsWith('/api/manage/')) return await manageUpdate(req, res, projectRoot, token, target.pathname.slice('/api/manage/'.length));
+      if (target.pathname === '/api/manifest') return await manifest({ req, res, projectRoot, baseUrl: url, privateKey });
       if (target.pathname === '/api/assets') return assets({ req, res, projectRoot, target });
       if (target.pathname === '/health') return json(res, 200, { ok: true, baseUrl: url });
       json(res, 404, { error: 'Not found' });
@@ -35,7 +37,8 @@ export async function startUpdateServer({ projectRoot, port = 4190, baseUrl, pri
     }
   });
 
-  await new Promise((resolve) => server.listen(port, resolve));
+  await new Promise((resolve, reject) => { server.once('error', reject); server.listen(port, resolve); });
+  if (!baseUrl) url = `http://localhost:${server.address().port}`;
   log.ok(`Update server listening on ${url}`);
   log.dim(`manifest: ${url}/api/manifest`);
   if (privateKey) log.dim('code signing enabled');
@@ -52,7 +55,10 @@ async function manifest({ req, res, projectRoot, baseUrl, privateKey }) {
   if (req.method !== 'GET') return json(res, 405, { error: 'Expected GET.' });
 
   const h = req.headers;
-  const protocolVersion = parseInt(str(h['expo-protocol-version']) ?? '0', 10);
+  const protocolVersion = Number(str(h['expo-protocol-version']) ?? '1');
+  if (protocolVersion !== 1) return json(res, 406, { error: 'Only Expo Updates protocol 1 is supported.' });
+  const accept = str(h.accept) ?? '*/*';
+  if (!accept.split(',').some(v => /^(multipart\/mixed|\*\/\*)(?:;|$)/.test(v.trim()) && !/;\s*q=0(?:\.0*)?(?:;|$)/.test(v))) return json(res, 406, { error: 'Accept multipart/mixed.' });
   const platform = str(h['expo-platform']);
   const runtimeVersion = str(h['expo-runtime-version']);
   const channel = str(h['expo-channel-name']) ?? 'production';
@@ -62,12 +68,8 @@ async function manifest({ req, res, projectRoot, baseUrl, privateKey }) {
   }
   if (!runtimeVersion) return json(res, 400, { error: 'No expo-runtime-version provided.' });
 
-  const resolved = resolveChannel(projectRoot, channel, runtimeVersion);
-  if (resolved.kind === 'none') {
-    return json(res, 404, {
-      error: `No update published to channel "${channel}" for runtime version ${runtimeVersion}.`,
-    });
-  }
+  const resolved = resolveChannel(projectRoot, channel, runtimeVersion, platform);
+  if (resolved.kind === 'none') return noUpdate(res);
 
   const signWith = str(h['expo-expect-signature']) ? privateKey : null;
   if (str(h['expo-expect-signature']) && !privateKey) {
@@ -79,7 +81,7 @@ async function manifest({ req, res, projectRoot, baseUrl, privateKey }) {
     // A device already on the embedded update has nothing to roll back to.
     const embedded = str(h['expo-embedded-update-id']);
     if (embedded && str(h['expo-current-update-id']) === embedded) {
-      return directive(res, { type: 'noUpdateAvailable' }, protocolVersion, signWith);
+      return noUpdate(res);
     }
     return directive(res, {
       type: 'rollBackToEmbedded',
@@ -97,7 +99,7 @@ async function manifest({ req, res, projectRoot, baseUrl, privateKey }) {
 
   // Protocol v1 lets us tell an already-current device to do nothing.
   if (protocolVersion === 1 && str(h['expo-current-update-id']) === record.id) {
-    return directive(res, { type: 'noUpdateAvailable' }, protocolVersion, signWith);
+    return noUpdate(res);
   }
 
   const body = {
@@ -137,6 +139,7 @@ function readExpoConfig(dir) {
 /* ---------- asset endpoint ---------- */
 
 function assets({ req, res, projectRoot, target }) {
+  if (req.method !== 'GET') return json(res, 405, { error: 'Expected GET.' });
   const updateId = target.searchParams.get('updateId');
   const asset = target.searchParams.get('asset');
   if (!updateId || !asset) return json(res, 400, { error: 'updateId and asset are required.' });
@@ -148,6 +151,7 @@ function assets({ req, res, projectRoot, target }) {
   const meta = JSON.parse(readFileSync(path.join(dir, 'metadata.json'), 'utf8'));
   const platforms = Object.values(meta.fileMetadata ?? {});
   const isBundle = platforms.some((p) => p.bundle === asset);
+  if (!isBundle && !platforms.some(p => (p.assets ?? []).some(a => a.path === asset))) return json(res, 404, { error: 'Not an exported asset.' });
   // Exported assets are named by content hash with no file extension, so the
   // real type lives in metadata.json — never in the filename.
   const ext = platforms.flatMap((p) => p.assets ?? []).find((a) => a.path === asset)?.ext
@@ -225,4 +229,9 @@ function json(res, status, body) {
   const payload = JSON.stringify(body);
   res.writeHead(status, { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(payload) });
   res.end(payload);
+}
+
+function noUpdate(res) {
+  res.writeHead(204, { 'expo-protocol-version': '1', 'expo-sfv-version': '0', 'cache-control': 'private, no-store' });
+  res.end();
 }

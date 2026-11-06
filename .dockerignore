@@ -1,0 +1,9 @@
+.git
+node_modules
+.leas
+credentials
+.env*
+site
+*.pem
+*.p8
+*.p12
