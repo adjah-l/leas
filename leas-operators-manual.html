@@ -574,7 +574,7 @@ leas update:serve --port 4190 --url https://updates.example.com</pre>
   <code>/api/assets</code> serves exported assets. Authenticated management lives under
   <code>/api/manage/</code>. Back up the persistent data directory, including <code>projects/*/.leas/updates</code> and retain old releases.</p>
   <h3>2. Configure and build each app</h3>
-<pre>npm install --save-dev leas-cli@1.1.0
+<pre>npm install --save-dev leas-cli@1.1.1
 leas update:configure --url https://updates.example.com --project my-app</pre>
   <p>One shared service supports many repositories. Each project gets its own releases,
   channels, runtime matching, assets and rollback state under <code>/projects/my-app</code>.
