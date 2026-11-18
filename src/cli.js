@@ -4,7 +4,7 @@ import { existsSync, writeFileSync, readFileSync, readdirSync, statSync } from '
 import path from 'node:path';
 import { log, run, LeasError } from './util.js';
 import { loadConfig, buildProfile, submitProfile, readAppJson } from './config.js';
-import { buildIos } from './build-ios.js';
+import { buildIos, iosContainer } from './build-ios.js';
 import { buildAndroid } from './build-android.js';
 import { submitIos } from './submit-ios.js';
 import { submitAndroid } from './submit-android.js';
@@ -187,7 +187,12 @@ async function cmdBuild() {
     let artifactPath;
     try {
       updateBuild(projectRoot, record.id, { status: 'running' });
-      await cmdPrebuild([platform], { quiet: true });
+      if (platform === 'ios' && (profile.projectPath || profile.workspacePath)) {
+        iosContainer(projectRoot, profile);
+        log.dim('Using configured native Xcode project; skipping Expo prebuild and CocoaPods.');
+      } else {
+        await cmdPrebuild([platform], { quiet: true });
+      }
       ({ artifactPath } = platform === 'ios'
         ? await buildIos({ projectRoot, profile, outDir })
         : await buildAndroid({ projectRoot, profile, outDir }));

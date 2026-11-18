@@ -5,11 +5,15 @@ import { materialize, setupIosSigning } from './credentials.js';
 
 export async function buildIos({ projectRoot, profile, outDir }) {
   requireBinary('xcodebuild', 'Install Xcode and run `xcode-select --install`.');
-  const iosDir = path.join(projectRoot, 'ios');
-  if (!existsSync(iosDir)) throw new LeasError('No ios/ directory. Run `leas prebuild` first.');
-
-  const workspace = findWorkspace(iosDir);
-  const scheme = profile.scheme ?? (await defaultScheme(workspace));
+  const container = iosContainer(projectRoot, profile);
+  const scheme = profile.scheme ?? (await defaultScheme(container));
+  const automatic = profile.signingStyle === 'automatic';
+  if (automatic && !profile.simulator && !profile.teamId) {
+    throw new LeasError('Automatic signing requires ios.teamId.');
+  }
+  if (profile.signingStyle && !['automatic', 'manual'].includes(profile.signingStyle)) {
+    throw new LeasError('ios.signingStyle must be automatic or manual.');
+  }
   const configuration = profile.configuration ?? 'Release';
   mkdirSync(outDir, { recursive: true });
 
@@ -17,7 +21,7 @@ export async function buildIos({ projectRoot, profile, outDir }) {
   const exportPath = path.join(outDir, 'export');
 
   let signing = null;
-  if (!profile.simulator) {
+  if (!profile.simulator && !automatic) {
     const certPath = materialize({
       filePath: profile.distributionCertificatePath,
       base64Env: 'LEAS_IOS_DIST_CERT_BASE64',
@@ -38,7 +42,7 @@ export async function buildIos({ projectRoot, profile, outDir }) {
   try {
     log.step(`Archiving ${scheme} (${configuration})`);
     const archiveArgs = [
-      '-workspace', workspace,
+      ...container,
       '-scheme', scheme,
       '-configuration', configuration,
       '-archivePath', archivePath,
@@ -46,7 +50,12 @@ export async function buildIos({ projectRoot, profile, outDir }) {
       'archive',
       'COMPILER_INDEX_STORE_ENABLE=NO',
     ];
-    if (signing) {
+    if (profile.buildNumber != null) archiveArgs.push(`CURRENT_PROJECT_VERSION=${profile.buildNumber}`);
+    if (profile.derivedDataPath) archiveArgs.push('-derivedDataPath', path.resolve(projectRoot, profile.derivedDataPath));
+    if (profile.clonedSourcePackagesDirPath) archiveArgs.push('-clonedSourcePackagesDirPath', path.resolve(projectRoot, profile.clonedSourcePackagesDirPath));
+    if (automatic && !profile.simulator) {
+      archiveArgs.push('CODE_SIGN_STYLE=Automatic', `DEVELOPMENT_TEAM=${profile.teamId}`, '-allowProvisioningUpdates');
+    } else if (signing) {
       archiveArgs.push(
         'CODE_SIGN_STYLE=Manual',
         `DEVELOPMENT_TEAM=${signing.teamId}`,
@@ -67,9 +76,10 @@ export async function buildIos({ projectRoot, profile, outDir }) {
     const plistPath = path.join(outDir, 'ExportOptions.plist');
     writeFileSync(plistPath, exportOptionsPlist({
       method: profile.exportMethod ?? 'app-store',
-      teamId: signing.teamId,
-      bundleId: await bundleIdentifier(archivePath),
-      profileName: signing.profileName,
+      teamId: automatic ? profile.teamId : signing.teamId,
+      bundleId: automatic ? null : await bundleIdentifier(archivePath),
+      profileName: signing?.profileName,
+      automatic,
       uploadSymbols: profile.uploadDebugSymbols !== false,
     }));
 
@@ -97,9 +107,9 @@ function findWorkspace(iosDir) {
   return path.join(iosDir, ws);
 }
 
-async function defaultScheme(workspace) {
-  const json = JSON.parse(await capture('xcodebuild', ['-list', '-json', '-workspace', workspace]));
-  const schemes = json.workspace?.schemes ?? [];
+async function defaultScheme(container) {
+  const json = JSON.parse(await capture('xcodebuild', ['-list', '-json', ...container]));
+  const schemes = json.workspace?.schemes ?? json.project?.schemes ?? [];
   const pick = schemes.find((s) => !/Tests?$/.test(s)) ?? schemes[0];
   if (!pick) throw new LeasError('No schemes found in workspace.');
   return pick;
@@ -112,19 +122,43 @@ async function bundleIdentifier(archivePath) {
   ]);
 }
 
-function exportOptionsPlist({ method, teamId, bundleId, profileName, uploadSymbols }) {
+export function exportOptionsPlist({ method, teamId, bundleId, profileName, uploadSymbols, automatic = false }) {
   return `<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-  <key>method</key><string>${method}</string>
-  <key>teamID</key><string>${teamId}</string>
-  <key>signingStyle</key><string>manual</string>
+  <key>method</key><string>${xml(method)}</string>
+  <key>teamID</key><string>${xml(teamId)}</string>
+  <key>signingStyle</key><string>${automatic ? 'automatic' : 'manual'}</string>
+  <key>manageAppVersionAndBuildNumber</key><false/>
   <key>stripSwiftSymbols</key><true/>
   <key>uploadSymbols</key><${uploadSymbols ? 'true' : 'false'}/>
-  <key>provisioningProfiles</key>
-  <dict><key>${bundleId}</key><string>${profileName}</string></dict>
+  ${automatic ? '' : `<key>provisioningProfiles</key>
+  <dict><key>${xml(bundleId)}</key><string>${xml(profileName)}</string></dict>`}
 </dict>
 </plist>
 `;
+}
+
+/** Explicit native projects skip Expo generation and CocoaPods installation. */
+export function iosContainer(projectRoot, profile) {
+  if (profile.projectPath && profile.workspacePath) {
+    throw new LeasError('Set either ios.projectPath or ios.workspacePath.');
+  }
+  if (profile.projectPath || profile.workspacePath) {
+    const workspace = Boolean(profile.workspacePath);
+    const file = path.resolve(projectRoot, profile.workspacePath ?? profile.projectPath);
+    const suffix = workspace ? '.xcworkspace' : '.xcodeproj';
+    if (!file.endsWith(suffix) || !existsSync(file)) {
+      throw new LeasError(`Missing ${suffix}: ${file}`);
+    }
+    return [workspace ? '-workspace' : '-project', file];
+  }
+  const iosDir = path.join(projectRoot, 'ios');
+  if (!existsSync(iosDir)) throw new LeasError('No ios/ directory. Set ios.projectPath for a native Xcode project, or run `leas prebuild`.');
+  return ['-workspace', findWorkspace(iosDir)];
+}
+
+function xml(value) {
+  return String(value).replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;').replaceAll("'", '&apos;');
 }

@@ -241,3 +241,40 @@ When per-minute cost or queue time stops working, swap the fleet without touchin
 | A Mac mini on your desk | a self-hosted runner is genuinely viable at low volume |
 
 The engine is `leas build --local`. The fleet is just what runs it.
+
+### Native Swift / Xcode projects
+
+For an existing Swift app, set `build.production.ios.projectPath` to its
+`.xcodeproj` (or `workspacePath` to a `.xcworkspace`) and set `scheme`.
+LEAS builds that container directly and skips Expo prebuild and CocoaPods.
+Run any project generation or dependency setup required by your project first.
+
+Use `signingStyle: "automatic"` with `teamId` to let an authorized Xcode account
+resolve signing for the app and its extensions. This uses the Mac's existing
+signing identities; manual signing remains the default for existing configurations.
+Optional `buildNumber` sets `CURRENT_PROJECT_VERSION` for all targets;
+`derivedDataPath` and `clonedSourcePackagesDirPath` select reusable build caches.
+Automatic export preserves the chosen build number.
+
+```json
+{
+  "build": {
+    "production": {
+      "ios": {
+        "projectPath": "MyApp.xcodeproj",
+        "scheme": "MyApp",
+        "signingStyle": "automatic",
+        "teamId": "YOUR_TEAM_ID",
+        "exportMethod": "app-store-connect",
+        "buildNumber": "5"
+      }
+    }
+  }
+}
+```
+
+Add the usual `submit.production.ios` API-key configuration, then run
+`leas build --platform ios --auto-submit`. Set submit `buildVersion` to the same
+build number and `waitForProcessing: true` to track that exact uploaded build.
+Auto-submit uploads to App Store Connect for TestFlight; App Review submission
+is a separate action in App Store Connect.

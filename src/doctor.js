@@ -10,6 +10,8 @@ import {
 import { ascToken } from './submit-ios.js';
 import { googleAccessToken } from './submit-android.js';
 
+import { iosContainer } from './build-ios.js';
+
 const ASC = 'https://api.appstoreconnect.apple.com';
 const PLAY = 'https://androidpublisher.googleapis.com';
 
@@ -154,46 +156,57 @@ async function checkIos(r, { projectRoot, config, profileName, offline }) {
     }, 'Install Xcode and run: xcode-select --install');
   }
 
-  // --- distribution certificate ---
-  let certFingerprint = null;
-  await r.probe(G, 'Distribution certificate', async () => {
-    const cert = await readDistributionCertificate({ projectRoot, build });
-    certFingerprint = cert.fingerprint;
-    return expiry(cert.identity, cert.expires);
-  }, 'Export the Apple Distribution certificate from Keychain Access as a .p12, or set LEAS_IOS_DIST_CERT_PASSWORD.');
+  if (build.projectPath || build.workspacePath) {
+    await r.probe(G, 'Native Xcode project', () => iosContainer(projectRoot, build)[1]);
+  }
+  if (build.simulator) {
+    r.skip(G, 'Signing', 'Simulator archive');
+  } else if (build.signingStyle === 'automatic') {
+    if (!build.teamId) r.fail(G, 'Automatic signing', 'ios.teamId is required');
+    else r.warn(G, 'Automatic signing', `Team ${build.teamId}; Xcode resolves profiles for the app and extensions during archive.`, 'Use a Mac with an authorized Xcode account and signing identity.');
+  } else {
+    // --- distribution certificate ---
+    let certFingerprint = null;
+    await r.probe(G, 'Distribution certificate', async () => {
+      const cert = await readDistributionCertificate({ projectRoot, build });
+      certFingerprint = cert.fingerprint;
+      return expiry(cert.identity, cert.expires);
+    }, 'Export the Apple Distribution certificate from Keychain Access as a .p12, or set LEAS_IOS_DIST_CERT_PASSWORD.');
 
-  // --- provisioning profile ---
-  await r.probe(G, 'Provisioning profile', async () => {
-    const p = await readProvisioningProfile({ projectRoot, build });
+    // --- provisioning profile ---
+    await r.probe(G, 'Provisioning profile', async () => {
+      const p = await readProvisioningProfile({ projectRoot, build });
 
-    // The profile is the source of truth for what this build is allowed to be.
-    const appId = p.applicationIdentifier?.replace(/^[A-Z0-9]+\./, '');
-    const wanted = app.ios?.bundleIdentifier;
-    if (wanted && appId && appId !== wanted && appId !== '*') {
-      return {
-        status: 'fail',
-        detail: `profile is for ${appId}, app.json says ${wanted}`,
-        fix: 'Issue a profile for the right App ID at developer.apple.com/account/resources/profiles',
-      };
-    }
-    if (build.exportMethod === 'app-store' && p.hasDevices) {
-      return {
-        status: 'warn',
-        detail: `"${p.name}" provisions specific devices — that is an ad-hoc profile, not App Store`,
-        fix: 'Create an App Store distribution profile for this App ID.',
-      };
-    }
+      // The profile is the source of truth for what this build is allowed to be.
+      const appId = p.applicationIdentifier?.replace(/^[A-Z0-9]+\./, '');
+      const wanted = app.ios?.bundleIdentifier;
+      if (wanted && appId && appId !== wanted && appId !== '*') {
+        return {
+          status: 'fail',
+          detail: `profile is for ${appId}, app.json says ${wanted}`,
+          fix: 'Issue a profile for the right App ID at developer.apple.com/account/resources/profiles',
+        };
+      }
+      if (build.exportMethod === 'app-store' && p.hasDevices) {
+        return {
+          status: 'warn',
+          detail: `"${p.name}" provisions specific devices — that is an ad-hoc profile, not App Store`,
+          fix: 'Create an App Store distribution profile for this App ID.',
+        };
+      }
 
-    // A certificate the profile does not list cannot sign against it.
-    if (certFingerprint && p.certFingerprints.length && !p.certFingerprints.includes(certFingerprint)) {
-      return {
-        status: 'fail',
-        detail: `"${p.name}" does not list your distribution certificate`,
-        fix: 'Regenerate the profile after selecting the certificate you actually hold.',
-      };
-    }
-    return expiry(`"${p.name}"${appId ? ` · ${appId}` : ''}`, p.expires);
-  }, 'Download an App Store provisioning profile for this bundle identifier.');
+      // A certificate the profile does not list cannot sign against it.
+      if (certFingerprint && p.certFingerprints.length && !p.certFingerprints.includes(certFingerprint)) {
+        return {
+          status: 'fail',
+          detail: `"${p.name}" does not list your distribution certificate`,
+          fix: 'Regenerate the profile after selecting the certificate you actually hold.',
+        };
+      }
+      return expiry(`"${p.name}"${appId ? ` · ${appId}` : ''}`, p.expires);
+    }, 'Download an App Store provisioning profile for this bundle identifier.');
+
+  }
 
   // --- App Store Connect API key ---
   if (!submit) return r.skip(G, 'App Store Connect', `no submit.${profileName}.ios block — build only`);
