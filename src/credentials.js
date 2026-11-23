@@ -76,7 +76,7 @@ async function provisioningProfileUuid(profilePath) {
   return provisioningProfileField(profilePath, 'UUID');
 }
 
-async function provisioningProfileField(profilePath, key) {
+export async function provisioningProfileField(profilePath, key) {
   const xml = await decodeProfile(profilePath);
   const tmp = path.join(mkdtempSync(path.join(tmpdir(), 'leas-prof-')), 'p.plist');
   writeFileSync(tmp, xml);

@@ -49,3 +49,9 @@ test('native CLI builds and exports without invoking npm or importing manual cre
     assert.ok(commands[1].includes('-exportArchive'));
   } finally { rmSync(dir, { recursive: true, force: true }); }
 });
+test('manual IPA export includes independent app and extension profiles', () => {
+  const plist = exportOptionsPlist({ method: 'app-store-connect', teamId: 'TEAM', provisioningProfiles: { 'com.app': 'Main & Store', 'com.app.widget': 'Widget Store' }, uploadSymbols: true });
+  assert.match(plist, /<key>com.app<\/key><string>Main &amp; Store<\/string>/);
+  assert.match(plist, /<key>com.app.widget<\/key><string>Widget Store<\/string>/);
+  assert.doesNotMatch(plist, /undefined/);
+});

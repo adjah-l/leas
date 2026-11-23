@@ -339,7 +339,7 @@ async function checkAndroid(r, { projectRoot, config, profileName, offline }) {
     if (!res.ok) return { status: 'warn', detail: `unexpected ${res.status} from Google` };
     const edit = await res.json();
     await fetch(`${url}/${edit.id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } }).catch(() => {});
-    return `can release to ${submit.track ?? 'internal'}`;
+    return `authenticated for ${submit.track ?? 'internal'}; release permission is checked at commit`;
   });
 }
 

@@ -2,6 +2,7 @@ import { existsSync, mkdirSync, writeFileSync, readdirSync } from 'node:fs';
 import path from 'node:path';
 import { run, capture, log, LeasError, requireBinary } from './util.js';
 import { materialize, setupIosSigning } from './credentials.js';
+import { configureTargetSigning } from './target-signing.js';
 
 export async function buildIos({ projectRoot, profile, outDir }) {
   requireBinary('xcodebuild', 'Install Xcode and run `xcode-select --install`.');
@@ -39,7 +40,11 @@ export async function buildIos({ projectRoot, profile, outDir }) {
     });
   }
 
+  let targetSigning;
   try {
+    if (signing && profile.provisioningProfiles) {
+      targetSigning = await configureTargetSigning({ projectRoot, container, profiles: profile.provisioningProfiles, signing });
+    }
     log.step(`Archiving ${scheme} (${configuration})`);
     const archiveArgs = [
       ...container,
@@ -59,7 +64,7 @@ export async function buildIos({ projectRoot, profile, outDir }) {
       archiveArgs.push(
         'CODE_SIGN_STYLE=Manual',
         `DEVELOPMENT_TEAM=${signing.teamId}`,
-        `PROVISIONING_PROFILE_SPECIFIER=${signing.profileName}`,
+        ...(targetSigning ? [] : [`PROVISIONING_PROFILE_SPECIFIER=${signing.profileName}`]),
         `OTHER_CODE_SIGN_FLAGS=--keychain ${signing.keychain}`,
       );
     } else {
@@ -79,6 +84,7 @@ export async function buildIos({ projectRoot, profile, outDir }) {
       teamId: automatic ? profile.teamId : signing.teamId,
       bundleId: automatic ? null : await bundleIdentifier(archivePath),
       profileName: signing?.profileName,
+      provisioningProfiles: targetSigning?.names,
       automatic,
       uploadSymbols: profile.uploadDebugSymbols !== false,
     }));
@@ -97,6 +103,7 @@ export async function buildIos({ projectRoot, profile, outDir }) {
     log.ok(`Built ${artifactPath}`);
     return { artifactPath };
   } finally {
+    targetSigning?.restore();
     await signing?.cleanup();
   }
 }
@@ -122,7 +129,7 @@ async function bundleIdentifier(archivePath) {
   ]);
 }
 
-export function exportOptionsPlist({ method, teamId, bundleId, profileName, uploadSymbols, automatic = false }) {
+export function exportOptionsPlist({ method, teamId, bundleId, profileName, provisioningProfiles, uploadSymbols, automatic = false }) {
   return `<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
@@ -134,7 +141,7 @@ export function exportOptionsPlist({ method, teamId, bundleId, profileName, uplo
   <key>stripSwiftSymbols</key><true/>
   <key>uploadSymbols</key><${uploadSymbols ? 'true' : 'false'}/>
   ${automatic ? '' : `<key>provisioningProfiles</key>
-  <dict><key>${xml(bundleId)}</key><string>${xml(profileName)}</string></dict>`}
+  <dict>${Object.entries(provisioningProfiles ?? { [bundleId]: profileName }).map(([id, name]) => `<key>${xml(id)}</key><string>${xml(name)}</string>`).join('')}</dict>`}
 </dict>
 </plist>
 `;

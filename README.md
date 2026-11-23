@@ -278,3 +278,17 @@ Add the usual `submit.production.ios` API-key configuration, then run
 build number and `waitForProcessing: true` to track that exact uploaded build.
 Auto-submit uploads to App Store Connect for TestFlight; App Review submission
 is a separate action in App Store Connect.
+
+### Manual signing for app extensions
+
+For Expo projects with widgets or other app extensions, set
+`build.production.ios.provisioningProfiles` to a map from each bundle identifier
+to its local `.mobileprovision` path. Include the main app and every extension.
+LEAS applies each profile to its matching native target, exports all profile
+mappings, and restores the generated Xcode project after the build. This uses
+the Expo project's `xcode` package. Signing files remain local.
+
+Run `leas doctor` before an Android upload. Its Play API check creates and
+deletes an edit; Google may invalidate another active edit for the same identity.
+Authentication succeeds independently of permission to commit a production
+release, which Google verifies at the final submission step.
